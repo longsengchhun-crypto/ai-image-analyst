@@ -90,11 +90,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.photo_library_outlined, size: 48, color: Colors.grey.shade400),
+            Icon(Icons.photo_library_outlined, size: 48, color: mutedText(context)),
             const SizedBox(height: Spacing.md),
             Text(l10n.emptyHistoryTitle, style: appFont(context, fontSize: 16, fontWeight: FontWeight.w700)),
             const SizedBox(height: Spacing.xs),
-            Text(l10n.emptyHistorySubtitle, style: appFont(context, color: Colors.grey.shade600)),
+            Text(l10n.emptyHistorySubtitle, style: appFont(context, color: mutedText(context))),
           ],
         ),
       ),

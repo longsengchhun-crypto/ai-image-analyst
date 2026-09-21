@@ -53,6 +53,19 @@ class AppLocalizationsKm extends AppLocalizations {
   String get loadingAnalyzing => 'កំពុងវិភាគរូបភាពរបស់អ្នក...';
 
   @override
+  String get loadingAnalyzingSubtitle => 'ជាធម្មតាចំណាយពេលត្រឹមតែពីរបីវិនាទី។';
+
+  @override
+  String imageDetailsDimensions(int width, int height) {
+    return '$width × $height px';
+  }
+
+  @override
+  String imageDetailsSize(int size) {
+    return '$size KB';
+  }
+
+  @override
   String get errorImageInvalidTitle => 'រូបភាពនោះមិនអាចប្រើបានទេ';
 
   @override

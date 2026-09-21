@@ -16,6 +16,20 @@
   "previewRetake": "Retake",
   "previewAnalyze": "Analyze image",
   "loadingAnalyzing": "Analyzing your image...",
+  "loadingAnalyzingSubtitle": "Usually takes just a few seconds.",
+  "imageDetailsDimensions": "{width} × {height} px",
+  "@imageDetailsDimensions": {
+    "placeholders": {
+      "width": {"type": "int"},
+      "height": {"type": "int"}
+    }
+  },
+  "imageDetailsSize": "{size} KB",
+  "@imageDetailsSize": {
+    "placeholders": {
+      "size": {"type": "int"}
+    }
+  },
   "errorImageInvalidTitle": "That image can't be used",
   "errorAnalyzeFailedTitle": "We couldn't analyze that image",
   "btnStartOver": "Start over",

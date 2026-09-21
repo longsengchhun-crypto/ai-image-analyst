@@ -85,7 +85,7 @@ class _ResultScreenState extends State<ResultScreen> {
                 key: 'objects',
                 title: l10n.sectionObjects,
                 child: result.objects.isEmpty
-                    ? Text(l10n.noObjectsFound, style: appFont(context, color: Colors.grey.shade600))
+                    ? Text(l10n.noObjectsFound, style: appFont(context, color: mutedText(context)))
                     : Wrap(
                         spacing: Spacing.sm,
                         runSpacing: Spacing.sm,
@@ -133,7 +133,7 @@ class _ResultScreenState extends State<ResultScreen> {
           Expanded(
             child: Text(
               l10n.demoBannerText,
-              style: appFont(context, fontSize: 12, color: Colors.grey.shade800),
+              style: appFont(context, fontSize: 12, color: Theme.of(context).colorScheme.onSurface),
             ),
           ),
         ],
@@ -141,21 +141,27 @@ class _ResultScreenState extends State<ResultScreen> {
     );
   }
 
+  // Uses the calm "info" color, not "danger" red — this note is the AI's own
+  // qualifier about limited visibility/detail, not an error condition, and
+  // the adjacent ConfidenceBadge already communicates the actual confidence
+  // level. Coloring a routine caveat as an alarming error would misuse the
+  // app's semantic color system (danger should mean something actually went
+  // wrong).
   Widget _uncertaintyBanner(BuildContext context, String note) => Container(
         margin: const EdgeInsets.only(bottom: Spacing.md),
         padding: const EdgeInsets.all(Spacing.sm),
         decoration: BoxDecoration(
-          color: AppColors.danger.withValues(alpha: 0.08),
+          color: AppColors.info.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(Radii.button),
-          border: Border.all(color: AppColors.danger.withValues(alpha: 0.25)),
+          border: Border.all(color: AppColors.info.withValues(alpha: 0.3)),
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Icon(Icons.info_outline, size: 18, color: AppColors.danger),
+            const Icon(Icons.info_outline, size: 18, color: AppColors.info),
             const SizedBox(width: Spacing.sm),
             Expanded(
-              child: Text(note, style: appFont(context, fontSize: 12.5, color: Colors.grey.shade800)),
+              child: Text(note, style: appFont(context, fontSize: 12.5, color: Theme.of(context).colorScheme.onSurface)),
             ),
           ],
         ),
@@ -307,7 +313,7 @@ class _ResultScreenState extends State<ResultScreen> {
             const SizedBox(height: 4),
             Text(
               l10n.previousQuestionsNote,
-              style: appFont(context, fontSize: 12, color: Colors.grey.shade600),
+              style: appFont(context, fontSize: 12, color: mutedText(context)),
             ),
             const SizedBox(height: Spacing.sm),
             const Divider(height: 1),
@@ -348,7 +354,7 @@ class _ResultScreenState extends State<ResultScreen> {
                     padding: const EdgeInsets.only(top: 4),
                     child: Text(
                       qa.uncertaintyNote!,
-                      style: appFont(context, fontSize: 11.5, color: Colors.grey.shade600, fontStyle: FontStyle.italic),
+                      style: appFont(context, fontSize: 11.5, color: mutedText(context), fontStyle: FontStyle.italic),
                     ),
                   ),
               ],

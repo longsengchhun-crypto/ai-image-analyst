@@ -21,13 +21,10 @@ class ObjectTag extends StatelessWidget {
       decoration: BoxDecoration(
         color: isDark ? AppColors.cardDark : AppColors.cardLight,
         borderRadius: BorderRadius.circular(Radii.chip),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.06),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        // Bordered, not shadowed — matches ConfidenceBadge and the rest of
+        // the app's flat, elevation-0 card style instead of introducing a
+        // one-off drop shadow for this component alone.
+        border: Border.all(color: subtleBorder(context)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

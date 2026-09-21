@@ -75,7 +75,7 @@ class SettingsScreen extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(Spacing.sm, Spacing.sm, 0, Spacing.xs),
         child: Text(
           title.toUpperCase(),
-          style: appFont(context, fontSize: 12, fontWeight: FontWeight.w700, color: Colors.grey, letterSpacing: 0.6),
+          style: appFont(context, fontSize: 12, fontWeight: FontWeight.w700, color: mutedText(context), letterSpacing: 0.6),
         ),
       );
 
@@ -177,7 +177,7 @@ class _LanguageOption extends StatelessWidget {
         decoration: BoxDecoration(
           color: selected ? AppColors.accent.withValues(alpha: 0.14) : Colors.transparent,
           borderRadius: BorderRadius.circular(Radii.button),
-          border: Border.all(color: selected ? AppColors.accent : Colors.grey.shade300),
+          border: Border.all(color: selected ? AppColors.accent : subtleBorder(context)),
         ),
         alignment: Alignment.center,
         child: Text(label, style: labelStyle),
@@ -209,7 +209,7 @@ class _InfoTile extends StatelessWidget {
                 children: [
                   Text(title, style: appFont(context, fontSize: 14, fontWeight: FontWeight.w700)),
                   const SizedBox(height: 4),
-                  Text(subtitle, style: appFont(context, fontSize: 12.5, color: Colors.grey.shade600, height: 1.4)),
+                  Text(subtitle, style: appFont(context, fontSize: 12.5, color: mutedText(context), height: 1.4)),
                 ],
               ),
             ),

@@ -57,6 +57,9 @@ class AppTheme {
   }
 
   static ThemeData _shared(ThemeData base, {required bool khmer}) {
+    final isDark = base.brightness == Brightness.dark;
+    final borderColor = isDark ? AppColors.borderDark : AppColors.borderLight;
+    final mutedColor = isDark ? AppColors.textMutedDark : AppColors.textMutedLight;
     return base.copyWith(
       appBarTheme: AppBarTheme(
         backgroundColor: base.brightness == Brightness.dark ? AppColors.surfaceDark : AppColors.primary,
@@ -92,11 +95,11 @@ class AppTheme {
         contentPadding: const EdgeInsets.symmetric(horizontal: Spacing.md, vertical: Spacing.md),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(Radii.button),
-          borderSide: BorderSide(color: Colors.grey.shade300),
+          borderSide: BorderSide(color: borderColor),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(Radii.button),
-          borderSide: BorderSide(color: Colors.grey.shade300),
+          borderSide: BorderSide(color: borderColor),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(Radii.button),
@@ -106,7 +109,7 @@ class AppTheme {
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
         backgroundColor: base.brightness == Brightness.dark ? AppColors.cardDark : Colors.white,
         selectedItemColor: AppColors.accent,
-        unselectedItemColor: Colors.grey,
+        unselectedItemColor: mutedColor,
         type: BottomNavigationBarType.fixed,
         showUnselectedLabels: true,
       ),

@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -154,7 +157,7 @@ class _InitialState extends StatelessWidget {
               Text(
                 l10n.initialSubtitle,
                 textAlign: TextAlign.center,
-                style: appFont(context, fontSize: 14, color: Colors.grey.shade600, height: 1.4),
+                style: appFont(context, fontSize: 14, color: mutedText(context), height: 1.4),
               ),
               const SizedBox(height: Spacing.xl),
               SizedBox(
@@ -178,7 +181,7 @@ class _InitialState extends StatelessWidget {
               Text(
                 l10n.consentNotice,
                 textAlign: TextAlign.center,
-                style: appFont(context, fontSize: 11, color: Colors.grey),
+                style: appFont(context, fontSize: 11, color: mutedText(context)),
               ),
             ],
           ),
@@ -211,6 +214,11 @@ class _PreviewState extends StatelessWidget {
           ),
         ),
         Padding(
+          padding: const EdgeInsets.symmetric(horizontal: Spacing.md),
+          child: _ImageInfoLine(bytes: provider.selectedImageBytes!),
+        ),
+        const SizedBox(height: Spacing.sm),
+        Padding(
           padding: const EdgeInsets.fromLTRB(Spacing.md, 0, Spacing.md, Spacing.lg),
           child: Row(
             children: [
@@ -237,6 +245,46 @@ class _PreviewState extends StatelessWidget {
   }
 }
 
+/// Shows the selected image's real dimensions and file size — decoded from
+/// the actual bytes being sent, not invented — so the user knows what
+/// they're about to submit before tapping Analyze.
+class _ImageInfoLine extends StatelessWidget {
+  final Uint8List bytes;
+  const _ImageInfoLine({required this.bytes});
+
+  static Future<ui.Image> _decode(Uint8List bytes) {
+    final completer = Completer<ui.Image>();
+    ui.decodeImageFromList(bytes, completer.complete);
+    return completer.future;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final sizeKb = (bytes.lengthInBytes / 1024).round();
+    return FutureBuilder<ui.Image>(
+      future: _decode(bytes),
+      builder: (context, snapshot) {
+        final dims = snapshot.data;
+        final parts = <String>[
+          if (dims != null) l10n.imageDetailsDimensions(dims.width, dims.height),
+          l10n.imageDetailsSize(sizeKb),
+        ];
+        return Row(
+          children: [
+            Icon(Icons.image_outlined, size: 14, color: mutedText(context)),
+            const SizedBox(width: Spacing.xs),
+            Text(
+              parts.join('  ·  '),
+              style: appFont(context, fontSize: 12, color: mutedText(context)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
 class _LoadingState extends StatelessWidget {
   final ImageAnalysisProvider? provider;
   const _LoadingState({required this.provider});
@@ -259,15 +307,28 @@ class _LoadingState extends StatelessWidget {
           ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: Spacing.md),
-          child: Row(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(
-                width: 18,
-                height: 18,
-                child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.accent),
+              Row(
+                children: [
+                  const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.accent),
+                  ),
+                  const SizedBox(width: Spacing.sm),
+                  Text(l10n.loadingAnalyzing, style: appFont(context, fontWeight: FontWeight.w600)),
+                ],
               ),
-              const SizedBox(width: Spacing.sm),
-              Text(l10n.loadingAnalyzing, style: appFont(context, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 2),
+              Padding(
+                padding: const EdgeInsets.only(left: 26),
+                child: Text(
+                  l10n.loadingAnalyzingSubtitle,
+                  style: appFont(context, fontSize: 12.5, color: mutedText(context)),
+                ),
+              ),
             ],
           ),
         ),
@@ -301,7 +362,7 @@ class _ErrorState extends StatelessWidget {
             Text(
               provider.errorCode != null ? localizedError(l10n, provider.errorCode!) : l10n.errorGeneric,
               textAlign: TextAlign.center,
-              style: appFont(context, fontSize: 14, color: Colors.grey.shade600),
+              style: appFont(context, fontSize: 14, color: mutedText(context)),
             ),
             const SizedBox(height: Spacing.lg),
             Row(

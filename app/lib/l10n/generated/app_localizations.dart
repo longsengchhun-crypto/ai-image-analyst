@@ -182,6 +182,24 @@ abstract class AppLocalizations {
   /// **'Analyzing your image...'**
   String get loadingAnalyzing;
 
+  /// No description provided for @loadingAnalyzingSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Usually takes just a few seconds.'**
+  String get loadingAnalyzingSubtitle;
+
+  /// No description provided for @imageDetailsDimensions.
+  ///
+  /// In en, this message translates to:
+  /// **'{width} × {height} px'**
+  String imageDetailsDimensions(int width, int height);
+
+  /// No description provided for @imageDetailsSize.
+  ///
+  /// In en, this message translates to:
+  /// **'{size} KB'**
+  String imageDetailsSize(int size);
+
   /// No description provided for @errorImageInvalidTitle.
   ///
   /// In en, this message translates to:

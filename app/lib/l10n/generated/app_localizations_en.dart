@@ -53,6 +53,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get loadingAnalyzing => 'Analyzing your image...';
 
   @override
+  String get loadingAnalyzingSubtitle => 'Usually takes just a few seconds.';
+
+  @override
+  String imageDetailsDimensions(int width, int height) {
+    return '$width × $height px';
+  }
+
+  @override
+  String imageDetailsSize(int size) {
+    return '$size KB';
+  }
+
+  @override
   String get errorImageInvalidTitle => 'That image can\'t be used';
 
   @override

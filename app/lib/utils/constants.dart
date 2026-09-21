@@ -60,17 +60,36 @@ class AppColors {
   static const Color success = Color(0xFF2E9E6B);
   static const Color warning = Color(0xFFE0A72E);
   static const Color danger = Color(0xFFD94F4F);
+  static const Color info = Color(0xFF3B6EA8); // calm blue for neutral/contextual notes
 
   static const Color surfaceLight = Color(0xFFF7F9FC);
   static const Color surfaceDark = Color(0xFF10182A);
   static const Color cardLight = Colors.white;
   static const Color cardDark = Color(0xFF1B2740);
 
+  // Muted text / borders. Defined once here (rather than ad hoc
+  // `Colors.grey.shadeXXX` per file) so every screen reads the same shade for
+  // the same purpose, and so it actually adapts in dark mode instead of
+  // going low-contrast against a dark surface.
+  static const Color textMutedLight = Color(0xFF5B6472);
+  static const Color textMutedDark = Color(0xFFA6ADBB);
+  static const Color borderLight = Color(0xFFDDE2E8);
+  static const Color borderDark = Color(0xFF2B384F);
+
   // Confidence bands
   static const Color confidenceHigh = Color(0xFF2E9E6B);
   static const Color confidenceMedium = Color(0xFFE0A72E);
   static const Color confidenceLow = Color(0xFFD94F4F);
 }
+
+/// Theme-aware muted text color — use this instead of a raw `Colors.grey.shadeXXX`
+/// so secondary/supporting text stays legible in both light and dark mode.
+Color mutedText(BuildContext context) =>
+    Theme.of(context).brightness == Brightness.dark ? AppColors.textMutedDark : AppColors.textMutedLight;
+
+/// Theme-aware subtle border/divider color, for the same reason as [mutedText].
+Color subtleBorder(BuildContext context) =>
+    Theme.of(context).brightness == Brightness.dark ? AppColors.borderDark : AppColors.borderLight;
 
 /// Maps the backend's qualitative confidence bands to display color/label.
 enum ConfidenceBand { high, medium, low }

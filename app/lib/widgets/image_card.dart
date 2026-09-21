@@ -73,8 +73,8 @@ class ImageCard extends StatelessWidget {
                       : Container(
                           width: 64,
                           height: 64,
-                          color: Colors.grey.shade300,
-                          child: const Icon(Icons.image_outlined, color: Colors.grey),
+                          color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+                          child: Icon(Icons.image_outlined, color: mutedText(context)),
                         ),
                 ),
                 const SizedBox(width: Spacing.md),
@@ -96,14 +96,14 @@ class ImageCard extends StatelessWidget {
                           Text(
                             DateFormat('MMM d, h:mm a', Localizations.localeOf(context).toString())
                                 .format(analysis.createdAt),
-                            style: appFont(context, fontSize: 11, color: Colors.grey),
+                            style: appFont(context, fontSize: 11, color: mutedText(context)),
                           ),
                           if (analysis.questions.isNotEmpty) ...[
                             const SizedBox(width: Spacing.sm),
-                            Icon(Icons.question_answer_outlined, size: 12, color: Colors.grey.shade500),
+                            Icon(Icons.question_answer_outlined, size: 12, color: mutedText(context)),
                             const SizedBox(width: 2),
                             Text('${analysis.questions.length}',
-                                style: appFont(context, fontSize: 11, color: Colors.grey)),
+                                style: appFont(context, fontSize: 11, color: mutedText(context))),
                           ],
                         ],
                       ),
