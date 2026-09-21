@@ -56,6 +56,25 @@ class DatabaseService {
     await db.insert('image_history', map, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
+  /// Writes many rows in a single transaction instead of one platform-channel
+  /// round trip per row — used when syncing a whole history page from the
+  /// server, where a sequential `await upsert(...)` loop would otherwise
+  /// serialize N separate SQLite calls.
+  Future<void> upsertAll(List<ImageAnalysis> analyses) async {
+    if (analyses.isEmpty) return;
+    final db = await database;
+    final now = DateTime.now().toIso8601String();
+    await db.transaction((txn) async {
+      final batch = txn.batch();
+      for (final analysis in analyses) {
+        final map = analysis.toDbMap();
+        map['updated_at'] = now;
+        batch.insert('image_history', map, conflictAlgorithm: ConflictAlgorithm.replace);
+      }
+      await batch.commit(noResult: true);
+    });
+  }
+
   Future<List<ImageAnalysis>> getAll() async {
     final db = await database;
     final rows = await db.query('image_history', orderBy: 'created_at DESC');

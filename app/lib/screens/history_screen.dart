@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../l10n/generated/app_localizations.dart';
@@ -68,7 +69,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 return ImageCard(
                   analysis: item,
                   onTap: () => _openDetail(context, item),
-                  onDelete: () => provider.deleteItem(item.id),
+                  onDelete: () {
+                    HapticFeedback.lightImpact();
+                    provider.deleteItem(item.id);
+                  },
                 );
               },
             ),
@@ -139,6 +143,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
           TextButton(onPressed: () => Navigator.pop(dialogContext), child: Text(l10n.btnCancel)),
           TextButton(
             onPressed: () {
+              HapticFeedback.mediumImpact();
               Navigator.pop(dialogContext);
               provider.clearAll();
             },

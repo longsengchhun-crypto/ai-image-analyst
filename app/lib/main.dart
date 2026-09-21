@@ -28,8 +28,14 @@ class AiImageAnalystApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => ImageAnalysisProvider()),
         ChangeNotifierProvider(create: (_) => HistoryProvider()),
+        ChangeNotifierProxyProvider<HistoryProvider, ImageAnalysisProvider>(
+          create: (_) => ImageAnalysisProvider(),
+          // Gives the image-analysis flow a live reference to History so a
+          // finished analysis (or newly-answered question) shows up there
+          // the instant it happens, not just after History's own refresh.
+          update: (_, history, image) => (image ?? ImageAnalysisProvider())..historyProvider = history,
+        ),
         ChangeNotifierProvider(create: (_) => LocaleProvider()..load()),
       ],
       child: Consumer<LocaleProvider>(

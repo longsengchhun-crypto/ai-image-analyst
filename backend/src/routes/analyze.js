@@ -31,10 +31,15 @@ router.post('/', upload.single('image'), async (req, res, next) => {
       return res.status(400).json({ error: 'No image file provided. Use the "image" form field.' });
     }
 
+    // Thumbnail generation doesn't depend on the normalized buffer, so it can
+    // run fully overlapped with the (much slower) AI call instead of adding
+    // to the request's wall-clock time.
+    const thumbnailPromise = buildThumbnail(req.file.buffer);
     const { buffer, mediaType } = await normalizeForAnalysis(req.file.buffer);
-    const thumbnail = await buildThumbnail(req.file.buffer);
-
-    const analysis = await analyzeImage(buffer, mediaType);
+    const [analysis, thumbnail] = await Promise.all([
+      analyzeImage(buffer, mediaType),
+      thumbnailPromise,
+    ]);
 
     const overallScore = bandToScore(analysis.overallConfidenceBand);
     const objects = (analysis.objects || []).map((o) => ({

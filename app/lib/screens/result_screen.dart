@@ -162,15 +162,25 @@ class _ResultScreenState extends State<ResultScreen> {
       );
 
   Widget _imagePreview(ImageAnalysisProvider provider) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(Radii.card),
-      child: SizedBox(
-        height: 260,
-        child: PhotoView(
-          imageProvider: MemoryImage(provider.selectedImageBytes!),
-          minScale: PhotoViewComputedScale.contained,
-          maxScale: PhotoViewComputedScale.covered * 3,
-          backgroundDecoration: const BoxDecoration(color: Colors.black12),
+    return Hero(
+      tag: 'active-image',
+      // PhotoView owns its own gesture/scale controller, which doesn't need
+      // to exist mid-flight — swap in a plain static image for the animation
+      // itself so PhotoView only ever mounts once the hero lands.
+      flightShuttleBuilder: (flightContext, animation, direction, fromContext, toContext) => ClipRRect(
+        borderRadius: BorderRadius.circular(Radii.card),
+        child: Image.memory(provider.selectedImageBytes!, fit: BoxFit.cover),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(Radii.card),
+        child: SizedBox(
+          height: 260,
+          child: PhotoView(
+            imageProvider: MemoryImage(provider.selectedImageBytes!),
+            minScale: PhotoViewComputedScale.contained,
+            maxScale: PhotoViewComputedScale.covered * 3,
+            backgroundDecoration: const BoxDecoration(color: Colors.black12),
+          ),
         ),
       ),
     );

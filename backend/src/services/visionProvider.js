@@ -112,16 +112,47 @@ function demoAnswer(question) {
 // ---------------------------------------------------------------------------
 // Gemini backend (Google AI Studio — free tier)
 // ---------------------------------------------------------------------------
-const GEMINI_MAX_ATTEMPTS = 3;
+const GEMINI_MAX_ATTEMPTS_PER_MODEL = 2;
 const GEMINI_RETRY_STATUS = new Set([429, 500, 503]);
+
+// The configured model first, then a couple of fallbacks that carry their
+// own separate quota/capacity pool — a transient "model overloaded" 503, or
+// a free-tier daily quota exhausted on one model (both observed in
+// production), often don't affect another model, so falling back recovers
+// requests that a same-model retry never would.
+function geminiModelsToTry() {
+  const fallbacks = ['gemini-3.1-flash-lite', 'gemini-flash-lite-latest'];
+  return [config.geminiModel, ...fallbacks.filter((m) => m !== config.geminiModel)];
+}
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function callGemini(systemPrompt, userText, imageBuffer, mediaType) {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${config.geminiModel}:generateContent?key=${config.geminiApiKey}`;
+async function callGeminiModel(model, body) {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${config.geminiApiKey}`;
 
+  let resp;
+  for (let attempt = 1; attempt <= GEMINI_MAX_ATTEMPTS_PER_MODEL; attempt += 1) {
+    resp = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+
+    if (resp.ok) return resp;
+
+    const errText = await resp.text().catch(() => '');
+    console.error(`[visionProvider] Gemini API error ${resp.status} on ${model} (attempt ${attempt}/${GEMINI_MAX_ATTEMPTS_PER_MODEL}):`, errText);
+
+    const shouldRetry = GEMINI_RETRY_STATUS.has(resp.status) && attempt < GEMINI_MAX_ATTEMPTS_PER_MODEL;
+    if (!shouldRetry) return null;
+    await sleep(400 * attempt);
+  }
+  return null;
+}
+
+async function callGemini(systemPrompt, userText, imageBuffer, mediaType) {
   const body = {
     systemInstruction: { parts: [{ text: systemPrompt }] },
     contents: [
@@ -140,24 +171,13 @@ async function callGemini(systemPrompt, userText, imageBuffer, mediaType) {
     },
   };
 
-  let resp;
-  for (let attempt = 1; attempt <= GEMINI_MAX_ATTEMPTS; attempt += 1) {
-    resp = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-
-    if (resp.ok) break;
-
-    const errText = await resp.text().catch(() => '');
-    console.error(`[visionProvider] Gemini API error ${resp.status} (attempt ${attempt}/${GEMINI_MAX_ATTEMPTS}):`, errText);
-
-    const shouldRetry = GEMINI_RETRY_STATUS.has(resp.status) && attempt < GEMINI_MAX_ATTEMPTS;
-    if (!shouldRetry) {
-      throw new Error('AI provider request failed.');
-    }
-    await sleep(500 * attempt);
+  let resp = null;
+  for (const model of geminiModelsToTry()) {
+    resp = await callGeminiModel(model, body);
+    if (resp) break;
+  }
+  if (!resp) {
+    throw new Error('AI provider request failed.');
   }
 
   const data = await resp.json();

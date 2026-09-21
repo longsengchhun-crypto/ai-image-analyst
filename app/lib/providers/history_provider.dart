@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
 import '../models/app_error.dart';
@@ -44,11 +46,14 @@ class HistoryProvider extends ChangeNotifier {
     try {
       final remote = await _apiService.fetchHistory();
       items = remote;
-      for (final item in remote) {
-        await _db.upsert(item);
-      }
       status = items.isEmpty ? HistoryStatus.empty : HistoryStatus.loaded;
       errorCode = null;
+      // Show the fresh list immediately; mirror it to the local SQLite cache
+      // in the background in one batched transaction instead of blocking the
+      // screen on N sequential platform-channel writes.
+      notifyListeners();
+      unawaited(_db.upsertAll(remote).catchError((_) {}));
+      return;
     } on ApiException catch (e) {
       // If we already have cached items to show, don't blow away the screen —
       // just surface the error, otherwise show a full error state.
@@ -59,6 +64,21 @@ class HistoryProvider extends ChangeNotifier {
       if (items.isEmpty) status = HistoryStatus.error;
     }
     notifyListeners();
+  }
+
+  /// Inserts or updates a single analysis at the front of the in-memory list
+  /// immediately — called right after a fresh analysis or a new answered
+  /// question, so History reflects it instantly instead of waiting for the
+  /// next full network `refresh()` (which may not happen until the user
+  /// manually pulls to refresh, since the tab's state survives tab switches).
+  void prependOrUpdate(ImageAnalysis analysis) {
+    items = [
+      analysis,
+      ...items.where((i) => i.id != analysis.id),
+    ];
+    status = HistoryStatus.loaded;
+    notifyListeners();
+    unawaited(_db.upsert(analysis).catchError((_) {}));
   }
 
   Future<void> deleteItem(String id) async {

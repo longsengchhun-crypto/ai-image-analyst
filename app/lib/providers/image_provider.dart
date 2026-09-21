@@ -6,6 +6,7 @@ import '../services/api_service.dart';
 import '../services/database_service.dart';
 import '../services/image_service.dart';
 import '../utils/validators.dart';
+import 'history_provider.dart';
 
 enum AnalysisStatus { initial, imageSelected, loading, success, error }
 
@@ -23,6 +24,11 @@ enum AnalysisStatus { initial, imageSelected, loading, success, error }
 class ImageAnalysisProvider extends ChangeNotifier {
   final ImageService _imageService = ImageService();
   final ApiService _apiService = ApiService.instance;
+
+  /// Set by the app's provider wiring (see `main.dart`) so a completed
+  /// analysis or answered question can be reflected in History the instant
+  /// it happens, rather than waiting for History's own next network refresh.
+  HistoryProvider? historyProvider;
 
   AnalysisStatus status = AnalysisStatus.initial;
   Uint8List? selectedImageBytes;
@@ -107,6 +113,7 @@ class ImageAnalysisProvider extends ChangeNotifier {
         // Non-fatal: the result is still shown; it just won't be cached
         // locally on this platform/run.
       }
+      historyProvider?.prependOrUpdate(result!);
     }
     notifyListeners();
   }
@@ -137,6 +144,7 @@ class ImageAnalysisProvider extends ChangeNotifier {
       } catch (_) {
         // Non-fatal.
       }
+      historyProvider?.prependOrUpdate(result!);
     }
 
     isAskingQuestion = false;

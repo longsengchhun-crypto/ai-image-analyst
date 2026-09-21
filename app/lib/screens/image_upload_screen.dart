@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../l10n/generated/app_localizations.dart';
@@ -55,9 +56,11 @@ class ImageUploadScreen extends StatelessWidget {
   }
 
   static Future<void> _analyze(BuildContext context, ImageAnalysisProvider provider) async {
+    HapticFeedback.lightImpact();
     await provider.submitForAnalysis();
     if (!context.mounted) return;
     if (provider.status == AnalysisStatus.success) {
+      HapticFeedback.mediumImpact();
       await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ResultScreen()));
       if (context.mounted) provider.reset();
     }
@@ -198,9 +201,12 @@ class _PreviewState extends StatelessWidget {
         Expanded(
           child: Padding(
             padding: const EdgeInsets.all(Spacing.md),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(Radii.card),
-              child: Image.memory(provider.selectedImageBytes!, fit: BoxFit.cover, width: double.infinity),
+            child: Hero(
+              tag: 'active-image',
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(Radii.card),
+                child: Image.memory(provider.selectedImageBytes!, fit: BoxFit.cover, width: double.infinity),
+              ),
             ),
           ),
         ),
@@ -243,9 +249,12 @@ class _LoadingState extends StatelessWidget {
         if (provider?.selectedImageBytes != null)
           Padding(
             padding: const EdgeInsets.all(Spacing.md),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(Radii.card),
-              child: Image.memory(provider!.selectedImageBytes!, height: 220, fit: BoxFit.cover, width: double.infinity),
+            child: Hero(
+              tag: 'active-image',
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(Radii.card),
+                child: Image.memory(provider!.selectedImageBytes!, height: 220, fit: BoxFit.cover, width: double.infinity),
+              ),
             ),
           ),
         Padding(
