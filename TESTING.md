@@ -43,6 +43,46 @@ Once `GEMINI_API_KEY` was set on Vercel production and redeployed:
 - Re-ran the same analyze + ask-question sequence after both fixes: clean
   201/200 responses, no retries needed on that run.
 
+### End-to-end app run against the live backend (not just curl)
+
+Built and served the actual Flutter web release build locally, then drove it
+headlessly through a real user flow against the production backend: pick a
+photo → tap Analyze → view the real result → navigate to History with no
+manual refresh. This is what actually surfaced the two bugs below — a pure
+API/curl test would have missed both:
+
+1. **History showed a stale list.** After a fresh analysis, tapping the
+   History tab still showed the old list — the new item wasn't there until
+   a manual pull-to-refresh. Root cause: `HistoryScreen`'s `initState` (which
+   calls `HistoryProvider.loadInitial()`) only ever runs once, because the
+   tab's widget state survives switching tabs (`IndexedStack` in
+   `HomeScreen`). Fixed by wiring `ImageAnalysisProvider` with a live
+   reference to `HistoryProvider` (`ChangeNotifierProxyProvider` in
+   `main.dart`) and calling a new `HistoryProvider.prependOrUpdate()` the
+   instant an analysis or a newly-answered question completes. Verified with
+   a real screenshot: analyze → back → History tab (no refresh gesture) shows
+   the new item immediately, correct thumbnail/description/confidence/timestamp.
+2. **This Gemini key's free tier caps `gemini-flash-latest` (which resolves
+   to `gemini-3.8-flash`) at 20 requests/day.** Running this same real
+   end-to-end flow a handful of times during testing exhausted that quota and
+   turned into hard `500`s (`429 RESOURCE_EXHAUSTED` from Gemini, surfaced as
+   a generic failure to the user). Confirmed via `vercel logs`. Fixed two
+   ways: switched the primary model to `gemini-flash-lite-latest` (a
+   separate, much larger free-tier quota bucket — confirmed via direct
+   `curl` calls to `generativelanguage.googleapis.com` before switching), and
+   added a same-request fallback chain (`gemini-flash-lite-latest` →
+   `gemini-3.1-flash-lite` → `gemini-flash-lite-latest`) so a quota/overload
+   failure on one model tries another before giving up. Re-ran the exact
+   same flow 3x after the fix: clean `201`s every time.
+
+Also fixed while investigating the History bug (found by re-reading the sync
+code, not by running it): `HistoryProvider.refresh()` was awaiting a
+sequential `for` loop of individual SQLite upserts before ever calling
+`notifyListeners()`, so the screen stayed on its loading state until every
+row had been written one platform-channel call at a time. Now it shows the
+fresh list immediately and mirrors it to SQLite via a new batched
+`DatabaseService.upsertAll()` (one transaction) in the background.
+
 ### Flutter app (Flutter 3.47.5 stable, installed and used in this delivery)
 
 | Check | Command | Result |

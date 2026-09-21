@@ -49,7 +49,7 @@ works identically on an iPhone's Safari.
 | Backend API | Node.js + Express | Complete, tested against live DB — see [backend/](backend/) |
 | Database | Postgres on Neon | Migrated and live |
 | Hosting | Vercel (serverless) | **Deployed**: `https://ai-image-analyst-backend.vercel.app` |
-| AI provider | Google Gemini (`gemini-flash-latest`) | **Live** — real AI analysis, not demo mode |
+| AI provider | Google Gemini (`gemini-flash-lite-latest`, with model fallback) | **Live** — real AI analysis, not demo mode |
 
 ## Live backend
 
@@ -67,10 +67,15 @@ persistence, history, delete — is fully live too**, verified end-to-end
 against the production Neon database, including a seeded history entry with a
 follow-up question, visible in the running app (see screenshots below).
 
-A transient "model overloaded" 503 from Gemini was observed once in
-production logs during testing — the backend now retries automatically (up to
-3 attempts with backoff) on 429/500/503 before surfacing an error, so a brief
-spike in demand no longer surfaces as a failure to the user.
+Two real issues surfaced only once live traffic hit the real Gemini API, both
+fixed and verified: a transient "model overloaded" 503, and — more
+significantly — this key's free tier caps `gemini-flash-latest` at only 20
+requests/day, which normal testing exhausted outright and surfaced as hard
+500s. The backend now (a) retries automatically on 429/500/503, and (b) if a
+model still fails, falls back to a different Gemini model with its own
+separate quota/capacity pool (`gemini-flash-lite-latest`, chosen as the
+primary model precisely because its free-tier quota is much larger) before
+giving up. See TESTING.md for the full incident writeup.
 
 If you ever need to swap providers or rotate the key:
 ```bash
@@ -96,7 +101,7 @@ This was not left as an on-paper design — everything below was actually run:
   pick-a-photo → analyze → view-result run against the live backend, with no
   data pre-loaded. See `docs/screenshots/` (`07`–`09` are the fresh-capture
   run) and `PROJECT_REPORT.md` §9.
-- **Five real bugs found and fixed** by actually running the app end to
+- **Seven real bugs found and fixed** by actually running the app end to
   end, not just reading the code:
   1. A `RenderFlex overflowed by 7.0 pixels` layout bug on short viewports —
      the Analyze screen's guidance content wasn't scrollable.
@@ -116,6 +121,18 @@ This was not left as an on-paper design — everything below was actually run:
      hard failure to the user on the very first live production request.
      Fixed by retrying automatically up to 3 times with backoff on
      429/500/503 before giving up.
+  6. Found by actually driving the deployed web app through a real
+     pick-photo → analyze → open-History run (not just curl): the History
+     tab went stale after a fresh analysis and only updated on a manual
+     pull-to-refresh, because its provider only loads once (the tab's state
+     survives switching tabs). Fixed by giving the analysis flow a live
+     reference to History and updating it the instant an analysis completes,
+     plus batching the local SQLite sync into one transaction instead of one
+     round trip per row so the screen never blocks on it.
+  7. That same real end-to-end run also exhausted this Gemini key's
+     20-requests/day free-tier quota on `gemini-flash-latest`, turning into
+     hard 500s mid-testing — see the AI provider note above for the fix
+     (switched primary model, added cross-model fallback).
 - **Full English/Khmer localization**, verified with a real widget test that
   switches the app to Khmer and asserts the UI actually re-renders in Khmer
   (not just that the translation files parse) — see
