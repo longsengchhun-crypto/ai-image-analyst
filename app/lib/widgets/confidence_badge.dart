@@ -1,0 +1,48 @@
+import 'package:flutter/material.dart';
+
+import '../utils/constants.dart';
+
+/// Small pill showing a qualitative confidence level, color-coded so users
+/// can scan results at a glance (green/amber/red).
+class ConfidenceBadge extends StatelessWidget {
+  final ConfidenceBand band;
+  final bool compact;
+
+  const ConfidenceBadge({super.key, required this.band, this.compact = false});
+
+  @override
+  Widget build(BuildContext context) {
+    final color = confidenceBandColor(band);
+    final label = compact
+        ? band.name[0].toUpperCase() + band.name.substring(1)
+        : confidenceBandLabel(band);
+
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: compact ? 8 : 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.14),
+        borderRadius: BorderRadius.circular(Radii.chip),
+        border: Border.all(color: color.withOpacity(0.4)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 6,
+            height: 6,
+            margin: const EdgeInsets.only(right: 6),
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          ),
+          Text(
+            label,
+            style: TextStyle(
+              color: color,
+              fontSize: compact ? 11 : 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
