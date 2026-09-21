@@ -277,12 +277,17 @@ automated widget test, not by inspection). Fixed by wrapping it in a
   `https://ai-image-analyst-backend.vercel.app`. Environment variables
   (`DATABASE_URL`, `JWT_SECRET`, `APP_API_KEY`, `GEMINI_MODEL`,
   `ANTHROPIC_MODEL`, `CORS_ORIGINS`) are set as encrypted Vercel project
-  variables for Production and Development; the GitHub repository is
-  connected to the Vercel project (`vercel git connect`) for continuous
-  deployment on future pushes — the project's Root Directory still needs
-  setting to `backend` in the Vercel dashboard once, since that monorepo
-  setting isn't exposed to the CLI. Neither `GEMINI_API_KEY` nor
-  `ANTHROPIC_API_KEY` is set yet (demo mode) — see §12.
+  variables for Production and Development. GitHub↔Vercel auto-deploy was
+  tried and deliberately turned back off (`vercel git disconnect`): with the
+  project's Root Directory unset (a monorepo setting only available in the
+  Vercel dashboard, not the CLI), the first push after connecting it
+  triggered a build from the repo root instead of `backend/`, which broke
+  the live URL for a few minutes until caught and fixed with a manual
+  `vercel deploy --prod --yes`. Until someone sets Root Directory to
+  `backend` in the dashboard, deploys are manual and reliable
+  (`cd backend && vercel deploy --prod --yes`) rather than automatic and
+  fragile. Neither `GEMINI_API_KEY` nor `ANTHROPIC_API_KEY` is set yet
+  (demo mode) — see §12.
 - **Database**: Neon Postgres, migrated via `npm run migrate`
   (`backend/src/migrate.js` applies `migrations/schema.sql` idempotently).
 - **Source control**: pushed to GitHub. `.gitignore` excludes `.env`,
