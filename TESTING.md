@@ -135,6 +135,17 @@ output, and replace the "Expected" column with "Observed."
 | No network on device | Dio `connectionError`/timeout mapped to "Couldn't reach the server..." | ✅ code path in `api_service.dart` |
 | Offline History view | SQLite cache renders immediately; refresh failure keeps showing cached items with an error message rather than blanking the screen | ✅ `HistoryProvider.refresh()` preserves `items` on failure when non-empty |
 
+## Localization (English/Khmer)
+
+| Check | Method | Result |
+|---|---|---|
+| App boots and renders correctly in English (default) | `flutter test` | ✅ Passing |
+| Switching to Khmer in Settings re-renders the whole UI | `flutter test` — taps the Khmer option, then asserts the bottom nav, app bar, and Analyze screen headline all show the correct Khmer strings | ✅ Passing |
+| Khmer text actually uses Kantumruy Pro **Bold** | Same test asserts `style.fontFamily` contains `'KantumruyPro'` and `style.fontWeight == FontWeight.bold` on a real rendered `Text` widget | ✅ Passing |
+| Real device/browser rendering (not just widget-test assertions) | Deployed web build driven headlessly: switched to Khmer, navigated Analyze → Settings → History | ✅ Screenshots in `docs/screenshots/10-analyze-khmer.png`, `11-settings-khmer-language-switch.png` show correct glyphs and bold weight |
+| No untranslated error strings possible | Code review: every failure path stores an `AppErrorCode` enum value, never a `String`; text is only built at the display layer via `localizedError()` | ✅ Enforced by the type system — a raw English string can't reach a screen through this path |
+| Release builds still succeed with localization added | `flutter build apk --release`, `flutter build web --release` | ✅ Both succeed (APK: 52.7MB) |
+
 ## What's left to do before a graded live demo
 
 Only one thing — everything else (Flutter build, analyze, test, APK, web

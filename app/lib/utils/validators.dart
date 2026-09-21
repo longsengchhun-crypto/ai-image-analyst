@@ -1,5 +1,7 @@
 import 'dart:typed_data';
 
+import '../models/app_error.dart';
+
 /// Client-side guardrails before we ever spend bandwidth / API calls uploading
 /// an image. The backend re-validates everything server-side too — never
 /// trust the client alone.
@@ -9,9 +11,9 @@ import 'dart:typed_data';
 /// before this ever runs, and bytes work identically on web and mobile.
 class ImageValidationResult {
   final bool isValid;
-  final String? errorMessage;
-  const ImageValidationResult.valid() : isValid = true, errorMessage = null;
-  const ImageValidationResult.invalid(this.errorMessage) : isValid = false;
+  final AppErrorCode? errorCode;
+  const ImageValidationResult.valid() : isValid = true, errorCode = null;
+  const ImageValidationResult.invalid(this.errorCode) : isValid = false;
 }
 
 class Validators {
@@ -21,12 +23,10 @@ class Validators {
 
   static ImageValidationResult validateImageBytes(Uint8List bytes) {
     if (bytes.isEmpty) {
-      return const ImageValidationResult.invalid('That image appears to be empty or corrupted.');
+      return const ImageValidationResult.invalid(AppErrorCode.imageEmpty);
     }
     if (bytes.lengthInBytes > maxFileSizeBytes) {
-      return const ImageValidationResult.invalid(
-        'That image is larger than 8MB even after compression. Please choose a smaller image.',
-      );
+      return const ImageValidationResult.invalid(AppErrorCode.imageTooLargeClient);
     }
     return const ImageValidationResult.valid();
   }

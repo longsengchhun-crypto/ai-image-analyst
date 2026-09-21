@@ -1,13 +1,15 @@
 name: ai_image_analyst
 description: AI Image Understanding App — capture or upload a photo, get an AI description, detected objects, and ask visual questions about it.
 publish_to: "none"
-version: 1.0.0+1
+version: 1.1.0+2
 
 environment:
   sdk: ">=3.3.0 <4.0.0"
 
 dependencies:
   flutter:
+    sdk: flutter
+  flutter_localizations:
     sdk: flutter
 
   # State management
@@ -31,7 +33,7 @@ dependencies:
   google_fonts: ^6.2.1
   shimmer: ^3.0.0
   share_plus: ^13.3.0
-  intl: ^0.19.0
+  intl: ^0.20.3
 
   cupertino_icons: ^1.0.8
 
@@ -43,6 +45,7 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  generate: true
   assets:
     - assets/images/
 

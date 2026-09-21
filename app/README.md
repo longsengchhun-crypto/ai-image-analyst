@@ -1,15 +1,37 @@
 # AI Image Analyst — Flutter app
 
 Android and web platform folders are committed and **verified working**:
-`flutter analyze` is clean, the widget test suite passes, `flutter build apk
---release` produces a working release APK, and `flutter build web --release`
-produces a working web build — all confirmed in this repository's own build
-history (see `PROJECT_REPORT.md` §9 and `docs/screenshots/` for real
-screenshots captured from the running app). iOS/macOS/Linux/Windows
-scaffolding was not generated (no toolchain for those platforms was
-available in the build environment) — run `flutter create
---platforms=ios,macos,linux,windows .` once on a machine with the relevant
-SDKs to add them; it only adds the missing folders and won't touch `lib/`.
+`flutter analyze` is clean, the widget test suite passes (including an
+end-to-end test that switches the app to Khmer and asserts the UI actually
+re-renders in Khmer), `flutter build apk --release` produces a working
+release APK, and `flutter build web --release` produces a working web build
+— all confirmed in this repository's own build history (see
+`PROJECT_REPORT.md` §9 and `docs/screenshots/` for real screenshots
+captured from the running app, in both English and Khmer). An iOS scaffold
+(`ios/`) is committed too, generated via `flutter create --platforms=ios .`,
+but it has **not** been built or code-signed — that requires Xcode on a
+Mac, which was not available in this build environment. Anyone with a Mac
+can open `ios/Runner.xcworkspace` in Xcode and build/run immediately; no
+other setup is needed. macOS/Linux/Windows desktop scaffolding was not
+generated.
+
+## Languages
+
+English and Khmer are both fully supported via `flutter_localizations` +
+generated ARB translations (`lib/l10n/`). Khmer text renders in **Kantumruy
+Pro Bold** everywhere (`utils/app_fonts.dart` forces the bold weight for
+every Khmer string, regardless of what weight an individual widget
+requests — Khmer script needs a heavier stroke than Latin text to stay
+legible at UI sizes); English renders in Inter, unchanged. Switch languages
+from the Settings screen — the choice is persisted and also drives which
+font the whole app theme uses (see `theme.dart`), not just the translated
+strings.
+
+Every error message shown to the user is also translated: failures are
+carried around the app as a closed `AppErrorCode` enum
+(`models/app_error.dart`), never a pre-built English sentence, and only
+turned into text at the point of display via `utils/error_messages.dart` —
+so there is no code path that can leak an untranslated string.
 
 ## First-time setup
 
@@ -58,14 +80,18 @@ local development.
 
 ```
 lib/
-├── main.dart                  # App entrypoint, theming, Provider setup
-├── theme.dart                 # Light/dark theme definitions
+├── main.dart                  # App entrypoint, theming, localization, Provider setup
+├── theme.dart                 # Light/dark theme definitions (locale-aware font choice)
+├── l10n/
+│   ├── app_en.arb             # English source strings
+│   ├── app_km.arb             # Khmer translations
+│   └── generated/             # AppLocalizations classes (flutter gen-l10n output)
 ├── screens/
 │   ├── home_screen.dart       # Bottom-nav shell
 │   ├── image_upload_screen.dart
 │   ├── result_screen.dart
 │   ├── history_screen.dart
-│   └── settings_screen.dart
+│   └── settings_screen.dart   # Includes the language switcher
 ├── widgets/
 │   ├── image_card.dart
 │   ├── loading_indicator.dart
@@ -74,24 +100,28 @@ lib/
 ├── models/
 │   ├── image_analysis.dart
 │   ├── detected_object.dart
-│   └── qa_pair.dart
+│   ├── qa_pair.dart
+│   └── app_error.dart         # Closed error-code enum (never a raw string)
 ├── services/
 │   ├── api_service.dart       # REST client + anonymous auth
 │   ├── image_service.dart     # Camera/gallery capture + compression
 │   └── database_service.dart  # SQLite local cache
 ├── providers/
 │   ├── image_provider.dart    # Capture -> analyze -> ask flow
-│   └── history_provider.dart  # Persisted history list
+│   ├── history_provider.dart  # Persisted history list
+│   └── locale_provider.dart   # Persisted English/Khmer choice
 └── utils/
     ├── constants.dart
-    └── validators.dart
+    ├── validators.dart
+    ├── app_fonts.dart         # Inter (en) vs. bold Kantumruy Pro (km)
+    └── error_messages.dart    # AppErrorCode -> localized string
 ```
 
 ## Notes on design choices
 
 - **State management**: `provider`, chosen for its low ceremony and wide
-  familiarity; the app has two focused `ChangeNotifier`s rather than a large
-  global store.
+  familiarity; the app has three focused `ChangeNotifier`s (image analysis,
+  history, locale) rather than a large global store.
 - **Local history**: SQLite (`sqflite`) mirrors the backend's Postgres table
   so History loads instantly from disk and still shows previously-synced
   items when offline.

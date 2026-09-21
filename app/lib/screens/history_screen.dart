@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
+import '../l10n/generated/app_localizations.dart';
 import '../models/image_analysis.dart';
 import '../providers/history_provider.dart';
 import '../providers/image_provider.dart';
+import '../utils/app_fonts.dart';
 import '../utils/constants.dart';
+import '../utils/error_messages.dart';
 import '../widgets/image_card.dart';
 import 'result_screen.dart';
 
@@ -31,14 +33,15 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('History'),
+        title: Text(l10n.navHistory),
         actions: [
           Consumer<HistoryProvider>(
             builder: (context, provider, _) => IconButton(
               icon: const Icon(Icons.delete_sweep_outlined),
-              tooltip: 'Clear all',
+              tooltip: l10n.tooltipClearAllHistory,
               onPressed: provider.items.isEmpty ? null : () => _confirmClearAll(context, provider),
             ),
           ),
@@ -50,10 +53,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
             return const Center(child: CircularProgressIndicator());
           }
           if (provider.status == HistoryStatus.error && provider.items.isEmpty) {
-            return _errorState(provider);
+            return _errorState(context, provider);
           }
           if (provider.items.isEmpty) {
-            return _emptyState();
+            return _emptyState(context);
           }
           return RefreshIndicator(
             onRefresh: provider.refresh,
@@ -75,40 +78,46 @@ class _HistoryScreenState extends State<HistoryScreen> {
     );
   }
 
-  Widget _emptyState() => Center(
-        child: Padding(
-          padding: const EdgeInsets.all(Spacing.xl),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.photo_library_outlined, size: 48, color: Colors.grey.shade400),
-              const SizedBox(height: Spacing.md),
-              Text('No analyses yet', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700)),
-              const SizedBox(height: Spacing.xs),
-              Text(
-                'Photos you analyze will show up here.',
-                style: GoogleFonts.inter(color: Colors.grey.shade600),
-              ),
-            ],
-          ),
+  Widget _emptyState(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(Spacing.xl),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.photo_library_outlined, size: 48, color: Colors.grey.shade400),
+            const SizedBox(height: Spacing.md),
+            Text(l10n.emptyHistoryTitle, style: appFont(context, fontSize: 16, fontWeight: FontWeight.w700)),
+            const SizedBox(height: Spacing.xs),
+            Text(l10n.emptyHistorySubtitle, style: appFont(context, color: Colors.grey.shade600)),
+          ],
         ),
-      );
+      ),
+    );
+  }
 
-  Widget _errorState(HistoryProvider provider) => Center(
-        child: Padding(
-          padding: const EdgeInsets.all(Spacing.xl),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.wifi_off_outlined, size: 48, color: AppColors.danger),
-              const SizedBox(height: Spacing.md),
-              Text(provider.errorMessage ?? 'Could not load history.', textAlign: TextAlign.center),
-              const SizedBox(height: Spacing.md),
-              ElevatedButton(onPressed: provider.refresh, child: const Text('Retry')),
-            ],
-          ),
+  Widget _errorState(BuildContext context, HistoryProvider provider) {
+    final l10n = AppLocalizations.of(context)!;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(Spacing.xl),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.wifi_off_outlined, size: 48, color: AppColors.danger),
+            const SizedBox(height: Spacing.md),
+            Text(
+              provider.errorCode != null ? localizedError(l10n, provider.errorCode!) : l10n.errorGeneric,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: Spacing.md),
+            ElevatedButton(onPressed: provider.refresh, child: Text(l10n.btnRetry)),
+          ],
         ),
-      );
+      ),
+    );
+  }
 
   void _openDetail(BuildContext context, ImageAnalysis item) {
     // Load the past analysis into the working provider (read-only view: the
@@ -120,19 +129,20 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   void _confirmClearAll(BuildContext context, HistoryProvider provider) {
+    final l10n = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Clear all history?'),
-        content: const Text('This deletes every saved analysis on this device and on the server. This cannot be undone.'),
+        title: Text(l10n.dialogClearAllTitle),
+        content: Text(l10n.dialogClearAllContent),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(dialogContext), child: Text(l10n.btnCancel)),
           TextButton(
             onPressed: () {
               Navigator.pop(dialogContext);
               provider.clearAll();
             },
-            child: const Text('Clear all', style: TextStyle(color: AppColors.danger)),
+            child: Text(l10n.btnClearAll, style: const TextStyle(color: AppColors.danger)),
           ),
         ],
       ),

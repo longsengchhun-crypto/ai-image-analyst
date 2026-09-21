@@ -2,14 +2,16 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../l10n/generated/app_localizations.dart';
 import '../models/qa_pair.dart';
 import '../providers/image_provider.dart';
+import '../utils/app_fonts.dart';
 import '../utils/constants.dart';
+import '../utils/error_messages.dart';
 import '../utils/validators.dart';
 import '../widgets/confidence_badge.dart';
 import '../widgets/loading_indicator.dart';
@@ -38,6 +40,7 @@ class _ResultScreenState extends State<ResultScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Consumer<ImageAnalysisProvider>(
       builder: (context, provider, _) {
         final result = provider.result;
@@ -47,11 +50,11 @@ class _ResultScreenState extends State<ResultScreen> {
 
         return Scaffold(
           appBar: AppBar(
-            title: const Text('Analysis'),
+            title: Text(l10n.resultAppBarTitle),
             actions: [
               IconButton(
                 icon: const Icon(Icons.share_outlined),
-                tooltip: 'Share',
+                tooltip: l10n.tooltipShare,
                 onPressed: () => _shareResult(context, provider),
               ),
             ],
@@ -59,29 +62,30 @@ class _ResultScreenState extends State<ResultScreen> {
           body: ListView(
             padding: const EdgeInsets.all(Spacing.md),
             children: [
-              if (result.isDemoMode) _demoBanner(),
+              if (result.isDemoMode) _demoBanner(context),
               if (provider.selectedImageBytes != null)
                 _imagePreview(provider)
               else if (result.thumbnailBase64 != null)
                 _thumbnailPreview(result.thumbnailBase64!),
               const SizedBox(height: Spacing.md),
-              if (result.uncertaintyNote != null) _uncertaintyBanner(result.uncertaintyNote!),
+              if (result.uncertaintyNote != null) _uncertaintyBanner(context, result.uncertaintyNote!),
               _sectionCard(
+                context: context,
                 key: 'description',
-                title: 'Description',
+                title: l10n.sectionDescription,
                 trailing: ConfidenceBadge(band: result.confidenceBand),
                 child: Text(
                   result.description,
-                  style: GoogleFonts.inter(fontSize: 15, height: 1.5),
+                  style: appFont(context, fontSize: 15, height: 1.5),
                 ),
               ),
               const SizedBox(height: Spacing.md),
               _sectionCard(
+                context: context,
                 key: 'objects',
-                title: 'Detected objects & features',
+                title: l10n.sectionObjects,
                 child: result.objects.isEmpty
-                    ? Text('No distinct objects were confidently identified.',
-                        style: GoogleFonts.inter(color: Colors.grey.shade600))
+                    ? Text(l10n.noObjectsFound, style: appFont(context, color: Colors.grey.shade600))
                     : Wrap(
                         spacing: Spacing.sm,
                         runSpacing: Spacing.sm,
@@ -91,8 +95,9 @@ class _ResultScreenState extends State<ResultScreen> {
               if (result.detectedText != null && result.detectedText!.trim().isNotEmpty) ...[
                 const SizedBox(height: Spacing.md),
                 _sectionCard(
+                  context: context,
                   key: 'text',
-                  title: 'Text found in image (OCR)',
+                  title: l10n.sectionOcr,
                   child: SelectableText(
                     result.detectedText!,
                     style: const TextStyle(fontSize: 14, fontFamily: 'monospace', height: 1.5),
@@ -103,7 +108,7 @@ class _ResultScreenState extends State<ResultScreen> {
               if (provider.selectedImageBytes != null)
                 _questionSection(context, provider, result.questions)
               else if (result.questions.isNotEmpty)
-                _pastQuestionsReadOnly(result.questions),
+                _pastQuestionsReadOnly(context, result.questions),
               const SizedBox(height: Spacing.xxl),
             ],
           ),
@@ -112,29 +117,31 @@ class _ResultScreenState extends State<ResultScreen> {
     );
   }
 
-  Widget _demoBanner() => Container(
-        margin: const EdgeInsets.only(bottom: Spacing.md),
-        padding: const EdgeInsets.all(Spacing.sm),
-        decoration: BoxDecoration(
-          color: AppColors.warning.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(Radii.button),
-        ),
-        child: Row(
-          children: [
-            const Icon(Icons.science_outlined, size: 18, color: AppColors.warning),
-            const SizedBox(width: Spacing.sm),
-            Expanded(
-              child: Text(
-                'Demo mode: this is placeholder analysis. Configure GEMINI_API_KEY (free) or '
-                'ANTHROPIC_API_KEY on the backend for live results.',
-                style: GoogleFonts.inter(fontSize: 12, color: Colors.grey.shade800),
-              ),
+  Widget _demoBanner(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return Container(
+      margin: const EdgeInsets.only(bottom: Spacing.md),
+      padding: const EdgeInsets.all(Spacing.sm),
+      decoration: BoxDecoration(
+        color: AppColors.warning.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(Radii.button),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.science_outlined, size: 18, color: AppColors.warning),
+          const SizedBox(width: Spacing.sm),
+          Expanded(
+            child: Text(
+              l10n.demoBannerText,
+              style: appFont(context, fontSize: 12, color: Colors.grey.shade800),
             ),
-          ],
-        ),
-      );
+          ),
+        ],
+      ),
+    );
+  }
 
-  Widget _uncertaintyBanner(String note) => Container(
+  Widget _uncertaintyBanner(BuildContext context, String note) => Container(
         margin: const EdgeInsets.only(bottom: Spacing.md),
         padding: const EdgeInsets.all(Spacing.sm),
         decoration: BoxDecoration(
@@ -148,7 +155,7 @@ class _ResultScreenState extends State<ResultScreen> {
             const Icon(Icons.info_outline, size: 18, color: AppColors.danger),
             const SizedBox(width: Spacing.sm),
             Expanded(
-              child: Text(note, style: GoogleFonts.inter(fontSize: 12.5, color: Colors.grey.shade800)),
+              child: Text(note, style: appFont(context, fontSize: 12.5, color: Colors.grey.shade800)),
             ),
           ],
         ),
@@ -185,7 +192,13 @@ class _ResultScreenState extends State<ResultScreen> {
     );
   }
 
-  Widget _sectionCard({required String key, required String title, required Widget child, Widget? trailing}) {
+  Widget _sectionCard({
+    required BuildContext context,
+    required String key,
+    required String title,
+    required Widget child,
+    Widget? trailing,
+  }) {
     final isOpen = _expanded[key] ?? true;
     return Card(
       child: Padding(
@@ -198,7 +211,7 @@ class _ResultScreenState extends State<ResultScreen> {
               child: Row(
                 children: [
                   Expanded(
-                    child: Text(title, style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w700)),
+                    child: Text(title, style: appFont(context, fontSize: 15, fontWeight: FontWeight.w700)),
                   ),
                   if (trailing != null) ...[trailing, const SizedBox(width: Spacing.sm)],
                   AnimatedRotation(
@@ -223,22 +236,23 @@ class _ResultScreenState extends State<ResultScreen> {
   }
 
   Widget _questionSection(BuildContext context, ImageAnalysisProvider provider, List<QaPair> history) {
+    final l10n = AppLocalizations.of(context)!;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(Spacing.md),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Ask about this image', style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w700)),
+            Text(l10n.askAboutImage, style: appFont(context, fontSize: 15, fontWeight: FontWeight.w700)),
             const SizedBox(height: Spacing.sm),
             Row(
               children: [
                 Expanded(
                   child: TextField(
                     controller: _questionController,
-                    decoration: const InputDecoration(
-                      labelText: 'Ask about this image',
-                      hintText: 'e.g. How many people are in this image?',
+                    decoration: InputDecoration(
+                      labelText: l10n.askAboutImage,
+                      hintText: l10n.askHint,
                     ),
                     textInputAction: TextInputAction.send,
                     onSubmitted: (_) => _submitQuestion(provider),
@@ -248,7 +262,7 @@ class _ResultScreenState extends State<ResultScreen> {
                 SizedBox(
                   height: 48,
                   child: Tooltip(
-                    message: 'Send question',
+                    message: l10n.tooltipSendQuestion,
                     child: ElevatedButton(
                       onPressed: provider.isAskingQuestion ? null : () => _submitQuestion(provider),
                       child: provider.isAskingQuestion
@@ -263,7 +277,7 @@ class _ResultScreenState extends State<ResultScreen> {
               const SizedBox(height: Spacing.md),
               const Divider(height: 1),
               const SizedBox(height: Spacing.sm),
-              ...history.reversed.map(_qaTile),
+              ...history.reversed.map((qa) => _qaTile(context, qa)),
             ],
           ],
         ),
@@ -271,31 +285,31 @@ class _ResultScreenState extends State<ResultScreen> {
     );
   }
 
-  Widget _pastQuestionsReadOnly(List<QaPair> history) {
+  Widget _pastQuestionsReadOnly(BuildContext context, List<QaPair> history) {
+    final l10n = AppLocalizations.of(context)!;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(Spacing.md),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Previous questions', style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w700)),
+            Text(l10n.previousQuestions, style: appFont(context, fontSize: 15, fontWeight: FontWeight.w700)),
             const SizedBox(height: 4),
             Text(
-              'The original image is no longer available, so new questions can\'t be asked '
-              'from history — analyze the photo again to ask more.',
-              style: GoogleFonts.inter(fontSize: 12, color: Colors.grey.shade600),
+              l10n.previousQuestionsNote,
+              style: appFont(context, fontSize: 12, color: Colors.grey.shade600),
             ),
             const SizedBox(height: Spacing.sm),
             const Divider(height: 1),
             const SizedBox(height: Spacing.sm),
-            ...history.reversed.map(_qaTile),
+            ...history.reversed.map((qa) => _qaTile(context, qa)),
           ],
         ),
       ),
     );
   }
 
-  Widget _qaTile(QaPair qa) {
+  Widget _qaTile(BuildContext context, QaPair qa) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: Spacing.sm),
       child: Column(
@@ -306,7 +320,7 @@ class _ResultScreenState extends State<ResultScreen> {
               const Icon(Icons.help_outline, size: 16, color: AppColors.primary),
               const SizedBox(width: Spacing.xs),
               Expanded(
-                child: Text(qa.question, style: GoogleFonts.inter(fontSize: 13.5, fontWeight: FontWeight.w600)),
+                child: Text(qa.question, style: appFont(context, fontSize: 13.5, fontWeight: FontWeight.w600)),
               ),
             ],
           ),
@@ -316,7 +330,7 @@ class _ResultScreenState extends State<ResultScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(qa.answer, style: GoogleFonts.inter(fontSize: 13.5, height: 1.4)),
+                Text(qa.answer, style: appFont(context, fontSize: 13.5, height: 1.4)),
                 const SizedBox(height: 4),
                 ConfidenceBadge(band: qa.band, compact: true),
                 if (qa.uncertaintyNote != null)
@@ -324,7 +338,7 @@ class _ResultScreenState extends State<ResultScreen> {
                     padding: const EdgeInsets.only(top: 4),
                     child: Text(
                       qa.uncertaintyNote!,
-                      style: GoogleFonts.inter(fontSize: 11.5, color: Colors.grey.shade600, fontStyle: FontStyle.italic),
+                      style: appFont(context, fontSize: 11.5, color: Colors.grey.shade600, fontStyle: FontStyle.italic),
                     ),
                   ),
               ],
@@ -336,47 +350,51 @@ class _ResultScreenState extends State<ResultScreen> {
   }
 
   Future<void> _submitQuestion(ImageAnalysisProvider provider) async {
+    final l10n = AppLocalizations.of(context)!;
     final question = _questionController.text;
     if (!Validators.isQuestionValid(question)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a more specific question (3+ characters).')),
+        SnackBar(content: Text(l10n.questionTooShort)),
       );
       return;
     }
     _questionController.clear();
     FocusScope.of(context).unfocus();
     await provider.askQuestion(question);
-    if (provider.errorMessage != null && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(provider.errorMessage!)));
+    if (provider.errorCode != null && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(localizedError(l10n, provider.errorCode!))),
+      );
     }
   }
 
   Future<void> _shareResult(BuildContext context, ImageAnalysisProvider provider) async {
+    final l10n = AppLocalizations.of(context)!;
     final result = provider.result!;
     final buffer = StringBuffer()
-      ..writeln('AI Image Analysis')
+      ..writeln(l10n.shareHeader)
       ..writeln('==================')
       ..writeln(result.description)
       ..writeln()
-      ..writeln('Detected objects:');
+      ..writeln(l10n.shareDetectedObjectsHeader);
     for (final o in result.objects) {
-      buffer.writeln('- ${o.name} (${o.band.name} confidence)');
+      buffer.writeln(l10n.shareObjectLine(o.name, confidenceBandShortLabel(l10n, o.band)));
     }
     if (result.detectedText != null) {
       buffer.writeln();
-      buffer.writeln('Text found in image:');
+      buffer.writeln(l10n.shareTextFoundHeader);
       buffer.writeln(result.detectedText);
     }
     if (result.questions.isNotEmpty) {
       buffer.writeln();
-      buffer.writeln('Questions & answers:');
+      buffer.writeln(l10n.shareQaHeader);
       for (final qa in result.questions) {
         buffer.writeln('Q: ${qa.question}');
         buffer.writeln('A: ${qa.answer}');
       }
     }
     await SharePlus.instance.share(
-      ShareParams(text: buffer.toString(), subject: 'AI Image Analysis'),
+      ShareParams(text: buffer.toString(), subject: l10n.shareHeader),
     );
   }
 }

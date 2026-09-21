@@ -2,10 +2,10 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
 import '../models/image_analysis.dart';
+import '../utils/app_fonts.dart';
 import '../utils/constants.dart';
 import 'confidence_badge.dart';
 
@@ -86,7 +86,7 @@ class ImageCard extends StatelessWidget {
                         analysis.description,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500, height: 1.3),
+                        style: appFont(context, fontSize: 14, fontWeight: FontWeight.w500, height: 1.3),
                       ),
                       const SizedBox(height: Spacing.xs),
                       Row(
@@ -94,15 +94,16 @@ class ImageCard extends StatelessWidget {
                           ConfidenceBadge(band: analysis.confidenceBand, compact: true),
                           const SizedBox(width: Spacing.sm),
                           Text(
-                            DateFormat('MMM d, h:mm a').format(analysis.createdAt),
-                            style: GoogleFonts.inter(fontSize: 11, color: Colors.grey),
+                            DateFormat('MMM d, h:mm a', Localizations.localeOf(context).toString())
+                                .format(analysis.createdAt),
+                            style: appFont(context, fontSize: 11, color: Colors.grey),
                           ),
                           if (analysis.questions.isNotEmpty) ...[
                             const SizedBox(width: Spacing.sm),
                             Icon(Icons.question_answer_outlined, size: 12, color: Colors.grey.shade500),
                             const SizedBox(width: 2),
                             Text('${analysis.questions.length}',
-                                style: GoogleFonts.inter(fontSize: 11, color: Colors.grey)),
+                                style: appFont(context, fontSize: 11, color: Colors.grey)),
                           ],
                         ],
                       ),

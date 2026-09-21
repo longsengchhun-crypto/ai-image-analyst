@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../models/app_error.dart';
 import '../models/image_analysis.dart';
 import '../models/qa_pair.dart';
 import '../utils/constants.dart';
@@ -19,10 +20,10 @@ import '../utils/constants.dart';
 /// this service works unchanged on web (where there is no filesystem) as
 /// well as mobile and desktop.
 class ApiException implements Exception {
-  final String message;
-  ApiException(this.message);
+  final AppErrorCode code;
+  ApiException(this.code);
   @override
-  String toString() => message;
+  String toString() => 'ApiException($code)';
 }
 
 class ApiService {
@@ -56,7 +57,7 @@ class ApiService {
       _token = resp.data['token'] as String;
       await prefs.setString(_tokenPrefKey, _token!);
     } on DioException catch (e) {
-      throw ApiException(_friendlyMessage(e));
+      throw ApiException(_errorCode(e));
     }
   }
 
@@ -76,7 +77,7 @@ class ApiService {
       );
       return ImageAnalysis.fromApiJson(resp.data as Map<String, dynamic>);
     } on DioException catch (e) {
-      throw ApiException(_friendlyMessage(e));
+      throw ApiException(_errorCode(e));
     }
   }
 
@@ -100,7 +101,7 @@ class ApiService {
       );
       return QaPair.fromJson(resp.data as Map<String, dynamic>);
     } on DioException catch (e) {
-      throw ApiException(_friendlyMessage(e));
+      throw ApiException(_errorCode(e));
     }
   }
 
@@ -116,7 +117,7 @@ class ApiService {
       final items = (resp.data['items'] as List).cast<Map<String, dynamic>>();
       return items.map(ImageAnalysis.fromApiJson).toList();
     } on DioException catch (e) {
-      throw ApiException(_friendlyMessage(e));
+      throw ApiException(_errorCode(e));
     }
   }
 
@@ -126,7 +127,7 @@ class ApiService {
     try {
       await _dio.delete('/api/history/$id', options: _authedOptions);
     } on DioException catch (e) {
-      throw ApiException(_friendlyMessage(e));
+      throw ApiException(_errorCode(e));
     }
   }
 
@@ -136,27 +137,28 @@ class ApiService {
     try {
       await _dio.delete('/api/history', options: _authedOptions);
     } on DioException catch (e) {
-      throw ApiException(_friendlyMessage(e));
+      throw ApiException(_errorCode(e));
     }
   }
 
   /// Never surface raw backend/provider error text to the user — map to a
-  /// small set of safe, actionable messages instead.
-  String _friendlyMessage(DioException e) {
+  /// small, closed set of error codes that every screen renders through a
+  /// localized string (see `utils/error_messages.dart`), instead of building
+  /// English sentences here that could never be translated.
+  AppErrorCode _errorCode(DioException e) {
     if (e.type == DioExceptionType.connectionTimeout ||
         e.type == DioExceptionType.receiveTimeout ||
         e.type == DioExceptionType.sendTimeout) {
-      return "This is taking longer than expected. Check your connection and try again.";
+      return AppErrorCode.timeout;
     }
     if (e.type == DioExceptionType.connectionError) {
-      return "Couldn't reach the server. Check your internet connection.";
+      return AppErrorCode.connectionError;
     }
     final status = e.response?.statusCode;
-    final serverMessage = (e.response?.data is Map) ? e.response?.data['error'] as String? : null;
-    if (status == 401) return "Your session expired. Please try again.";
-    if (status == 413) return "That image is too large. Please use an image under 8MB.";
-    if (status == 429) return "Too many requests right now. Please wait a moment and try again.";
-    if (status != null && status >= 500) return "The server had a problem analyzing your image. Please try again.";
-    return serverMessage ?? "Something went wrong. Please try again.";
+    if (status == 401) return AppErrorCode.sessionExpired;
+    if (status == 413) return AppErrorCode.imageTooLarge;
+    if (status == 429) return AppErrorCode.rateLimited;
+    if (status != null && status >= 500) return AppErrorCode.serverError;
+    return AppErrorCode.unknown;
   }
 }

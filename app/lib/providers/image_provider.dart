@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 
+import '../models/app_error.dart';
 import '../models/image_analysis.dart';
 import '../services/api_service.dart';
 import '../services/database_service.dart';
@@ -15,6 +16,10 @@ enum AnalysisStatus { initial, imageSelected, loading, success, error }
 /// The picked image is held as raw bytes (`Uint8List`), not a `dart:io File`,
 /// so the entire capture -> preview -> analyze -> ask flow works unchanged
 /// on web (no filesystem) as well as mobile and desktop.
+///
+/// Failures are stored as an [AppErrorCode], never a pre-built English
+/// string, so the UI can render them in whichever language is active (see
+/// `utils/error_messages.dart`).
 class ImageAnalysisProvider extends ChangeNotifier {
   final ImageService _imageService = ImageService();
   final ApiService _apiService = ApiService.instance;
@@ -22,7 +27,7 @@ class ImageAnalysisProvider extends ChangeNotifier {
   AnalysisStatus status = AnalysisStatus.initial;
   Uint8List? selectedImageBytes;
   ImageAnalysis? result;
-  String? errorMessage;
+  AppErrorCode? errorCode;
   bool isAskingQuestion = false;
 
   Future<void> pickFromCamera() async {
@@ -39,14 +44,14 @@ class ImageAnalysisProvider extends ChangeNotifier {
     if (bytes == null) return;
     final validation = Validators.validateImageBytes(bytes);
     if (!validation.isValid) {
-      errorMessage = validation.errorMessage;
+      errorCode = validation.errorCode;
       status = AnalysisStatus.error;
       notifyListeners();
       return;
     }
     selectedImageBytes = bytes;
     result = null;
-    errorMessage = null;
+    errorCode = null;
     status = AnalysisStatus.imageSelected;
     notifyListeners();
   }
@@ -59,7 +64,7 @@ class ImageAnalysisProvider extends ChangeNotifier {
   void loadFromHistory(ImageAnalysis analysis) {
     selectedImageBytes = null;
     result = analysis;
-    errorMessage = null;
+    errorCode = null;
     status = AnalysisStatus.success;
     notifyListeners();
   }
@@ -67,7 +72,7 @@ class ImageAnalysisProvider extends ChangeNotifier {
   void reset() {
     selectedImageBytes = null;
     result = null;
-    errorMessage = null;
+    errorCode = null;
     status = AnalysisStatus.initial;
     notifyListeners();
   }
@@ -75,7 +80,7 @@ class ImageAnalysisProvider extends ChangeNotifier {
   Future<void> submitForAnalysis() async {
     if (selectedImageBytes == null) return;
     status = AnalysisStatus.loading;
-    errorMessage = null;
+    errorCode = null;
     notifyListeners();
 
     try {
@@ -83,10 +88,10 @@ class ImageAnalysisProvider extends ChangeNotifier {
       result = analysis;
       status = AnalysisStatus.success;
     } on ApiException catch (e) {
-      errorMessage = e.message;
+      errorCode = e.code;
       status = AnalysisStatus.error;
     } catch (_) {
-      errorMessage = 'Something went wrong analyzing your image. Please try again.';
+      errorCode = AppErrorCode.analysisFailed;
       status = AnalysisStatus.error;
     }
 
@@ -109,6 +114,7 @@ class ImageAnalysisProvider extends ChangeNotifier {
   Future<void> askQuestion(String question) async {
     if (result == null || selectedImageBytes == null) return;
     isAskingQuestion = true;
+    errorCode = null;
     notifyListeners();
 
     try {
@@ -119,9 +125,9 @@ class ImageAnalysisProvider extends ChangeNotifier {
       );
       result = result!.copyWith(questions: [...result!.questions, qa]);
     } on ApiException catch (e) {
-      errorMessage = e.message;
+      errorCode = e.code;
     } catch (_) {
-      errorMessage = 'Could not get an answer right now. Please try again.';
+      errorCode = AppErrorCode.questionFailed;
     }
 
     // Same non-fatal caching rule as submitForAnalysis() above.

@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 
+import '../models/app_error.dart';
 import '../models/image_analysis.dart';
 import '../services/api_service.dart';
 import '../services/database_service.dart';
@@ -10,13 +11,17 @@ enum HistoryStatus { loading, loaded, error, empty }
 /// cache immediately (so the screen never shows a blank loader if we've seen
 /// data before), then refreshes from the backend in the background — this
 /// gives a usable "offline mode" for previously-synced history.
+///
+/// Failures are stored as an [AppErrorCode], never a pre-built English
+/// string, so the History screen can render them in whichever language is
+/// active (see `utils/error_messages.dart`).
 class HistoryProvider extends ChangeNotifier {
   final ApiService _apiService = ApiService.instance;
   final DatabaseService _db = DatabaseService.instance;
 
   HistoryStatus status = HistoryStatus.loading;
   List<ImageAnalysis> items = [];
-  String? errorMessage;
+  AppErrorCode? errorCode;
 
   Future<void> loadInitial() async {
     List<ImageAnalysis> cached = [];
@@ -43,14 +48,14 @@ class HistoryProvider extends ChangeNotifier {
         await _db.upsert(item);
       }
       status = items.isEmpty ? HistoryStatus.empty : HistoryStatus.loaded;
-      errorMessage = null;
+      errorCode = null;
     } on ApiException catch (e) {
       // If we already have cached items to show, don't blow away the screen —
-      // just surface the error message; otherwise show a full error state.
-      errorMessage = e.message;
+      // just surface the error, otherwise show a full error state.
+      errorCode = e.code;
       if (items.isEmpty) status = HistoryStatus.error;
     } catch (_) {
-      errorMessage = 'Could not refresh history right now.';
+      errorCode = AppErrorCode.historyRefreshFailed;
       if (items.isEmpty) status = HistoryStatus.error;
     }
     notifyListeners();

@@ -391,10 +391,30 @@ regenerable artifact).
 ## 13. Nice-to-have features not implemented in this delivery
 
 PDF export, image crop/rotate before analysis, batch analysis, cloud photo
-library integration, an adjustable confidence threshold setting, and
-multi-language UI were scoped as bonus items in the assignment and were not
-built in this pass, to prioritize a fully working, tested core pipeline
-(capture → analyze → ask → history → delete/share) end-to-end. Dark mode,
-offline history viewing, and multiple questions per image — also listed as
-bonuses — **were** implemented, since they required no additional
-infrastructure beyond what the MVP already needed.
+library integration, and an adjustable confidence threshold setting were
+scoped as bonus items in the assignment and were not built in this pass, to
+prioritize a fully working, tested core pipeline (capture → analyze → ask →
+history → delete/share) end-to-end. Dark mode, offline history viewing,
+multiple questions per image, and — added after initial delivery, on
+request — **multi-language UI (English/Khmer)** were all implemented, since
+each required no additional infrastructure beyond what the MVP already
+needed.
+
+### 13.1 English/Khmer localization (added post-delivery)
+
+Full UI translation via `flutter_localizations` and generated ARB files
+(`app/lib/l10n/app_en.arb`, `app_km.arb`), switchable from Settings and
+persisted across launches (`LocaleProvider`). Khmer text renders in
+**Kantumruy Pro Bold** app-wide — both individual `Text` widgets (via a
+shared `appFont()` helper) and the base `ThemeData` (via a locale-aware
+`appTextTheme()`), so buttons, app bars, and input fields all pick up the
+correct font too, not just body copy. Every user-facing error was
+refactored from a hardcoded English string into a closed `AppErrorCode`
+enum, turned into text only at the point of display
+(`utils/error_messages.dart`) — so no failure path can leak untranslated
+text. Verified with a real widget test (`app/test/widget_test.dart`) that
+switches the running app to Khmer and asserts the actual rendered text and
+font family change, not just that the ARB files parse; and with real
+screenshots of the deployed web app in Khmer
+(`docs/screenshots/10-analyze-khmer.png`,
+`11-settings-khmer-language-switch.png`).

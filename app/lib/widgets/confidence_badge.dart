@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/generated/app_localizations.dart';
 import '../utils/constants.dart';
 
 /// Small pill showing a qualitative confidence level, color-coded so users
@@ -12,10 +13,9 @@ class ConfidenceBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final color = confidenceBandColor(band);
-    final label = compact
-        ? band.name[0].toUpperCase() + band.name.substring(1)
-        : confidenceBandLabel(band);
+    final label = compact ? confidenceBandShortLabel(l10n, band) : confidenceBandLabel(l10n, band);
 
     return Container(
       padding: EdgeInsets.symmetric(horizontal: compact ? 8 : 10, vertical: 4),

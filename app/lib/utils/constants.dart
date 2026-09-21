@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/generated/app_localizations.dart';
+
 /// App-wide constants: API config, spacing grid, and the color palette.
 /// Kept in one place so the rest of the app never hardcodes magic numbers.
 class AppConfig {
@@ -95,13 +97,24 @@ Color confidenceBandColor(ConfidenceBand band) {
   }
 }
 
-String confidenceBandLabel(ConfidenceBand band) {
+String confidenceBandLabel(AppLocalizations l10n, ConfidenceBand band) {
   switch (band) {
     case ConfidenceBand.high:
-      return 'High confidence';
+      return l10n.confidenceHighFull;
     case ConfidenceBand.medium:
-      return 'Medium confidence';
+      return l10n.confidenceMediumFull;
     case ConfidenceBand.low:
-      return 'Low confidence';
+      return l10n.confidenceLowFull;
+  }
+}
+
+String confidenceBandShortLabel(AppLocalizations l10n, ConfidenceBand band) {
+  switch (band) {
+    case ConfidenceBand.high:
+      return l10n.confidenceHighShort;
+    case ConfidenceBand.medium:
+      return l10n.confidenceMediumShort;
+    case ConfidenceBand.low:
+      return l10n.confidenceLowShort;
   }
 }

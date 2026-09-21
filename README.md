@@ -23,18 +23,29 @@ engine). Two options that actually work from a phone:
    https://ai-image-analyst-web.vercel.app — full app UI, works
    immediately. Camera capture needs a device with a camera; gallery
    picking works everywhere.
-2. **Install the real native app** (full camera/gallery access, faster,
-   works offline for cached history): download the release APK from
+2. **Install the real native app on Android** (full camera/gallery access,
+   faster, works offline for cached history): download the release APK from
    [the latest GitHub release](https://github.com/longsengchhun-crypto/ai-image-analyst/releases/latest)
    onto an Android phone and install it (Android will prompt to allow
    "install unknown apps" for your browser — that's expected for a
-   non-Play-Store APK). iOS has no equivalent side-load path without a
-   paid Apple Developer account and Xcode signing.
+   non-Play-Store APK).
+
+**iOS**: the Xcode project is committed at `app/ios/` (generated and ready
+to open), but it has not been built here — compiling and running an iOS app
+requires Xcode on a Mac, which this environment doesn't have, and there is
+no side-load path around that (Apple doesn't allow installing an unsigned
+build on a physical iPhone without either Xcode or a paid Developer account,
+unlike Android's "install unknown apps"). On a Mac: `cd app && open
+ios/Runner.xcworkspace`, pick a Simulator or your plugged-in iPhone, and hit
+Run — no other setup needed. Until then, option 1 above (the browser link)
+works identically on an iPhone's Safari.
 
 | Layer | Tech | Status |
 |---|---|---|
 | Mobile app | Flutter (Dart) | **Verified**: `flutter analyze` clean, tests pass, release APK builds — see [app/](app/) |
 | Web build (same app) | Flutter → web | **Live**: https://ai-image-analyst-web.vercel.app |
+| iOS | Flutter (Xcode project) | Scaffolded (`app/ios/`), not built — needs a Mac; see "Preview on your phone" |
+| Languages | English + Khmer | Full UI translation, switchable in Settings; Khmer renders in **Kantumruy Pro Bold** |
 | Backend API | Node.js + Express | Complete, tested against live DB — see [backend/](backend/) |
 | Database | Postgres on Neon | Migrated and live |
 | Hosting | Vercel (serverless) | **Deployed**: `https://ai-image-analyst-backend.vercel.app` |
@@ -96,6 +107,12 @@ This was not left as an on-paper design — everything below was actually run:
      a **successful** AI analysis into an error screen, discarding a correct
      result the user had already received. This could in principle have hit
      mobile too, not just web — see TESTING.md for the full explanation and fix.
+- **Full English/Khmer localization**, verified with a real widget test that
+  switches the app to Khmer and asserts the UI actually re-renders in Khmer
+  (not just that the translation files parse) — see
+  `docs/screenshots/10-analyze-khmer.png` and `11-settings-khmer-language-switch.png`
+  for real screenshots of the deployed web app running in Khmer, captured
+  the same way as the English ones.
 
 ## Repository layout
 
@@ -124,8 +141,7 @@ npm run dev               # http://localhost:8080
 **Flutter app:**
 ```bash
 cd app
-flutter create .          # one-time: generates android/ios/web platform folders
-flutter pub get
+flutter pub get   # android/, web/, and a scaffolded ios/ are already committed
 flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8080 --dart-define=APP_API_KEY=<your APP_API_KEY>
 ```
 

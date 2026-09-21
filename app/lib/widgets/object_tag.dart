@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import '../models/detected_object.dart';
+import '../utils/app_fonts.dart';
 import '../utils/constants.dart';
 import 'confidence_badge.dart';
 
@@ -34,7 +34,7 @@ class ObjectTag extends StatelessWidget {
         children: [
           Text(
             object.name,
-            style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600),
+            style: appFont(context, fontSize: 13, fontWeight: FontWeight.w600),
           ),
           const SizedBox(width: Spacing.sm),
           ConfidenceBadge(band: object.band, compact: true),

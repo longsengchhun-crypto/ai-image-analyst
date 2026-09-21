@@ -12,17 +12,17 @@ npm-debug.log*
 .vercel
 
 # --- Flutter / Dart ---
-# android/ and web/ ARE committed (flutter create was run and both platforms
-# build successfully — see README/PROJECT_REPORT). ios/macos/linux/windows
-# were never generated in this environment, so they stay excluded until
-# `flutter create --platforms=ios,macos,...` is run on a machine that has
-# those toolchains.
+# android/, web/, and ios/ ARE committed (flutter create was run for all
+# three — see README/PROJECT_REPORT). android/ and web/ are verified to
+# build successfully in this environment; ios/ is generated scaffolding
+# only — it cannot be built or code-signed here (no macOS/Xcode toolchain
+# available), so it needs `flutter build ios`/`ipa` run on a Mac before
+# first use. macos/linux/windows were never generated.
 app/.dart_tool/
 app/.flutter-plugins
 app/.flutter-plugins-dependencies
 app/.packages
 app/build/
-app/ios/
 app/macos/
 app/linux/
 app/windows/
@@ -39,6 +39,12 @@ app/android/app/profile
 app/android/app/release
 app/android/**/build/
 app/android/*.iml
+
+# iOS build-time/local-machine files (Xcode regenerates these; never portable)
+app/ios/Pods/
+app/ios/.symlinks/
+app/ios/Flutter/Flutter.podspec
+app/ios/Flutter/flutter_export_environment.sh
 
 # Web build output (regenerate with `flutter build web`)
 app/web/build/
