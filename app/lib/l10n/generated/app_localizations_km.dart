@@ -50,6 +50,15 @@ class AppLocalizationsKm extends AppLocalizations {
   String get previewAnalyze => 'វិភាគរូបភាព';
 
   @override
+  String get uploadZoneTitle => 'ជ្រើសរើសរូបភាពដើម្បីវិភាគ';
+
+  @override
+  String get uploadZoneSubtitle => 'ចុចដើម្បីរកមើលឯកសារក្នុងឧបករណ៍របស់អ្នក';
+
+  @override
+  String get uploadZoneFormats => 'JPG · PNG · WEBP';
+
+  @override
   String get loadingAnalyzing => 'កំពុងវិភាគរូបភាពរបស់អ្នក...';
 
   @override

@@ -11,6 +11,7 @@ import '../utils/app_fonts.dart';
 import '../utils/constants.dart';
 import '../utils/error_messages.dart';
 import '../widgets/loading_indicator.dart';
+import '../widgets/upload_zone.dart';
 import 'result_screen.dart';
 
 /// Home / Image Upload screen — the app's primary entry point.
@@ -25,6 +26,9 @@ class ImageUploadScreen extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(title: Text(l10n.appTitle)),
+      // No FAB here: the initial state's UploadZone already exposes both
+      // entry points (browse + camera) directly on screen, so a floating
+      // "new analysis" button in that same state would just duplicate it.
       body: Consumer<ImageAnalysisProvider>(
         builder: (context, provider, _) {
           switch (provider.status) {
@@ -43,18 +47,6 @@ class ImageUploadScreen extends StatelessWidget {
           }
         },
       ),
-      floatingActionButton: Consumer<ImageAnalysisProvider>(
-        builder: (context, provider, _) {
-          if (provider.status != AnalysisStatus.initial) {
-            return const SizedBox.shrink();
-          }
-          return FloatingActionButton.extended(
-            onPressed: () => _showSourceSheet(context, provider),
-            icon: const Icon(Icons.add_a_photo_outlined),
-            label: Text(l10n.fabNewAnalysis),
-          );
-        },
-      ),
     );
   }
 
@@ -69,53 +61,6 @@ class ImageUploadScreen extends StatelessWidget {
     }
   }
 
-  static void _showSourceSheet(BuildContext context, ImageAnalysisProvider provider) {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(Radii.sheet)),
-      ),
-      builder: (sheetContext) => _SourceSheet(provider: provider),
-    );
-  }
-}
-
-class _SourceSheet extends StatelessWidget {
-  final ImageAnalysisProvider provider;
-  const _SourceSheet({required this.provider});
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.all(Spacing.lg),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(l10n.sheetAddPhoto, style: appFont(context, fontSize: 17, fontWeight: FontWeight.w700)),
-            const SizedBox(height: Spacing.md),
-            ListTile(
-              leading: const Icon(Icons.photo_camera_outlined, color: AppColors.primary),
-              title: Text(l10n.sheetTakePhoto),
-              onTap: () {
-                Navigator.pop(context);
-                provider.pickFromCamera();
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.photo_library_outlined, color: AppColors.primary),
-              title: Text(l10n.sheetChooseGallery),
-              onTap: () {
-                Navigator.pop(context);
-                provider.pickFromGallery();
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }
 
 class _InitialState extends StatelessWidget {
@@ -130,60 +75,43 @@ class _InitialState extends StatelessWidget {
     // inside a Center) keeps this guidance screen from overflowing on short
     // viewports (small phones in landscape, or a resized desktop/web window)
     // while still centering the content vertically when there's room to.
+    // A max-width constraint on the whole composition keeps it a readable
+    // column on wide (desktop/web) viewports instead of the upload zone
+    // stretching edge to edge across a 1920px window.
     return LayoutBuilder(
-      builder: (context, constraints) => SingleChildScrollView(
-        padding: const EdgeInsets.all(Spacing.xl),
-        child: ConstrainedBox(
-          constraints: BoxConstraints(minHeight: constraints.maxHeight - Spacing.xl * 2),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: 96,
-                height: 96,
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.08),
-                  shape: BoxShape.circle,
+      builder: (context, constraints) => Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(Spacing.xl),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: constraints.maxHeight - Spacing.xl * 2,
+              maxWidth: 460,
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  l10n.initialHeadline,
+                  textAlign: TextAlign.center,
+                  style: appFont(context, fontSize: 24, fontWeight: FontWeight.w800, letterSpacing: -0.3),
                 ),
-                child: const Icon(Icons.visibility_outlined, size: 44, color: AppColors.primary),
-              ),
-              const SizedBox(height: Spacing.lg),
-              Text(
-                l10n.initialHeadline,
-                textAlign: TextAlign.center,
-                style: appFont(context, fontSize: 20, fontWeight: FontWeight.w700),
-              ),
-              const SizedBox(height: Spacing.sm),
-              Text(
-                l10n.initialSubtitle,
-                textAlign: TextAlign.center,
-                style: appFont(context, fontSize: 14, color: mutedText(context), height: 1.4),
-              ),
-              const SizedBox(height: Spacing.xl),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: onCamera,
-                  icon: const Icon(Icons.photo_camera_outlined),
-                  label: Text(l10n.sheetTakePhoto),
+                const SizedBox(height: Spacing.xxs),
+                Text(
+                  l10n.initialSubtitle,
+                  textAlign: TextAlign.center,
+                  style: appFont(context, fontSize: 14.5, color: mutedText(context), height: 1.45),
                 ),
-              ),
-              const SizedBox(height: Spacing.sm),
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: onGallery,
-                  icon: const Icon(Icons.photo_library_outlined),
-                  label: Text(l10n.sheetChooseGallery),
+                const SizedBox(height: Spacing.xl),
+                UploadZone(onBrowse: onGallery, onCamera: onCamera),
+                const SizedBox(height: Spacing.lg),
+                Text(
+                  l10n.consentNotice,
+                  textAlign: TextAlign.center,
+                  style: appFont(context, fontSize: 11, color: mutedText(context)),
                 ),
-              ),
-              const SizedBox(height: Spacing.lg),
-              Text(
-                l10n.consentNotice,
-                textAlign: TextAlign.center,
-                style: appFont(context, fontSize: 11, color: mutedText(context)),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -315,7 +243,7 @@ class _LoadingState extends StatelessWidget {
                   const SizedBox(
                     width: 18,
                     height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.accent),
+                    child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
                   ),
                   const SizedBox(width: Spacing.sm),
                   Text(l10n.loadingAnalyzing, style: appFont(context, fontWeight: FontWeight.w600)),

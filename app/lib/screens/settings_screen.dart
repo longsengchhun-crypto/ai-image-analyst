@@ -165,8 +165,8 @@ class _LanguageOption extends StatelessWidget {
     // (which would otherwise force Kantumruy Pro onto the Latin word
     // "English" while the app is set to Khmer, or vice versa).
     final labelStyle = khmerScript
-        ? GoogleFonts.kantumruyPro(fontWeight: FontWeight.bold, color: selected ? AppColors.accent : null)
-        : GoogleFonts.inter(fontWeight: FontWeight.w700, color: selected ? AppColors.accent : null);
+        ? GoogleFonts.kantumruyPro(fontWeight: FontWeight.bold, color: selected ? AppColors.primary : null)
+        : GoogleFonts.inter(fontWeight: FontWeight.w700, color: selected ? AppColors.primary : null);
 
     return InkWell(
       borderRadius: BorderRadius.circular(Radii.button),
@@ -175,9 +175,9 @@ class _LanguageOption extends StatelessWidget {
         duration: const Duration(milliseconds: 180),
         padding: const EdgeInsets.symmetric(vertical: Spacing.sm),
         decoration: BoxDecoration(
-          color: selected ? AppColors.accent.withValues(alpha: 0.14) : Colors.transparent,
+          color: selected ? AppColors.primary.withValues(alpha: 0.14) : Colors.transparent,
           borderRadius: BorderRadius.circular(Radii.button),
-          border: Border.all(color: selected ? AppColors.accent : subtleBorder(context)),
+          border: Border.all(color: selected ? AppColors.primary : subtleBorder(context)),
         ),
         alignment: Alignment.center,
         child: Text(label, style: labelStyle),

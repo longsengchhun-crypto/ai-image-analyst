@@ -50,6 +50,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get previewAnalyze => 'Analyze image';
 
   @override
+  String get uploadZoneTitle => 'Choose a photo to analyze';
+
+  @override
+  String get uploadZoneSubtitle => 'Tap to browse your device';
+
+  @override
+  String get uploadZoneFormats => 'JPG · PNG · WEBP';
+
+  @override
   String get loadingAnalyzing => 'Analyzing your image...';
 
   @override

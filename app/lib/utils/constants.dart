@@ -31,55 +31,73 @@ class AppConfig {
   static const Duration requestTimeout = Duration(seconds: 30);
 }
 
-/// 8px spacing grid used consistently across the UI.
+/// 4px spacing grid used consistently across the UI.
 class Spacing {
   Spacing._();
-  static const double xs = 4;
-  static const double sm = 8;
+  static const double xxs = 4;
+  static const double xs = 8;
+  static const double sm = 12;
   static const double md = 16;
   static const double lg = 24;
   static const double xl = 32;
   static const double xxl = 48;
+  static const double xxxl = 64;
+
+  /// Max content width on wide (desktop/web) viewports — the app composes
+  /// itself in a centered column instead of stretching full-bleed edge to
+  /// edge the way the old layout did above phone width.
+  static const double contentMaxWidth = 1120;
+  static const double breakpointWide = 900;
 }
 
 class Radii {
   Radii._();
-  static const double card = 16;
-  static const double button = 14;
-  static const double chip = 20;
-  static const double sheet = 24;
+  static const double sm = 8;
+  static const double card = 12;
+  static const double button = 10;
+  static const double chip = 8;
+  static const double sheet = 20;
+  static const double pill = 999;
 }
 
-/// Cohesive deep-blue palette with a warm accent, as specified in the brief.
+/// A restrained indigo-led palette — one deliberate brand hue (indigo) used
+/// for both identity and primary actions, rather than a two-hue
+/// brand-color + accent-color split. Neutrals are warm-gray, not pure gray,
+/// and the light background carries a faint cool tint rather than being
+/// stark white, which is what actually reads as "designed" instead of
+/// "default Material app" at a glance.
 class AppColors {
   AppColors._();
 
-  static const Color primary = Color(0xFF14335C); // deep blue
-  static const Color primaryDark = Color(0xFF0B1E3E);
-  static const Color accent = Color(0xFFFF7A45); // warm coral accent for CTAs
-  static const Color success = Color(0xFF2E9E6B);
-  static const Color warning = Color(0xFFE0A72E);
-  static const Color danger = Color(0xFFD94F4F);
-  static const Color info = Color(0xFF3B6EA8); // calm blue for neutral/contextual notes
+  static const Color primary = Color(0xFF4338CA); // indigo-700
+  static const Color primaryStrong = Color(0xFF312E81); // indigo-900, for text-on-tint / dark app bar
+  static const Color primarySoft = Color(0xFFEEF0FF); // indigo-50, for tinted surfaces/selection
+  static const Color success = Color(0xFF15803D);
+  static const Color warning = Color(0xFFB45309);
+  static const Color danger = Color(0xFFB91C1C);
+  static const Color info = Color(0xFF2563EB);
 
-  static const Color surfaceLight = Color(0xFFF7F9FC);
-  static const Color surfaceDark = Color(0xFF10182A);
+  static const Color surfaceLight = Color(0xFFF7F7FB); // faint cool-neutral, not stark white
+  static const Color surfaceDark = Color(0xFF121218);
   static const Color cardLight = Colors.white;
-  static const Color cardDark = Color(0xFF1B2740);
+  static const Color cardDark = Color(0xFF1C1C24);
 
   // Muted text / borders. Defined once here (rather than ad hoc
   // `Colors.grey.shadeXXX` per file) so every screen reads the same shade for
   // the same purpose, and so it actually adapts in dark mode instead of
   // going low-contrast against a dark surface.
-  static const Color textMutedLight = Color(0xFF5B6472);
-  static const Color textMutedDark = Color(0xFFA6ADBB);
-  static const Color borderLight = Color(0xFFDDE2E8);
-  static const Color borderDark = Color(0xFF2B384F);
+  static const Color textPrimaryLight = Color(0xFF1A1A23);
+  static const Color textPrimaryDark = Color(0xFFEDEDF2);
+  static const Color textMutedLight = Color(0xFF6B6B7A);
+  static const Color textMutedDark = Color(0xFF9797A6);
+  static const Color borderLight = Color(0xFFE4E4EC);
+  static const Color borderDark = Color(0xFF2C2C36);
 
-  // Confidence bands
-  static const Color confidenceHigh = Color(0xFF2E9E6B);
-  static const Color confidenceMedium = Color(0xFFE0A72E);
-  static const Color confidenceLow = Color(0xFFD94F4F);
+  // Confidence bands — reuse the same semantic colors as the rest of the
+  // system rather than a separate palette.
+  static const Color confidenceHigh = success;
+  static const Color confidenceMedium = warning;
+  static const Color confidenceLow = danger;
 }
 
 /// Theme-aware muted text color — use this instead of a raw `Colors.grey.shadeXXX`

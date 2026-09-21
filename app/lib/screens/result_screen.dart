@@ -48,6 +48,56 @@ class _ResultScreenState extends State<ResultScreen> {
           return const Scaffold(body: Center(child: CircularProgressIndicator()));
         }
 
+        final imageWidget = provider.selectedImageBytes != null
+            ? _imagePreview(provider)
+            : (result.thumbnailBase64 != null ? _thumbnailPreview(result.thumbnailBase64!) : null);
+
+        final analysisSections = <Widget>[
+          if (result.isDemoMode) _demoBanner(context),
+          if (result.uncertaintyNote != null) _uncertaintyBanner(context, result.uncertaintyNote!),
+          _sectionCard(
+            context: context,
+            key: 'description',
+            title: l10n.sectionDescription,
+            trailing: ConfidenceBadge(band: result.confidenceBand),
+            child: Text(
+              result.description,
+              style: appFont(context, fontSize: 15, height: 1.5),
+            ),
+          ),
+          const SizedBox(height: Spacing.md),
+          _sectionCard(
+            context: context,
+            key: 'objects',
+            title: l10n.sectionObjects,
+            child: result.objects.isEmpty
+                ? Text(l10n.noObjectsFound, style: appFont(context, color: mutedText(context)))
+                : Wrap(
+                    spacing: Spacing.sm,
+                    runSpacing: Spacing.sm,
+                    children: result.objects.map((o) => ObjectTag(object: o)).toList(),
+                  ),
+          ),
+          if (result.detectedText != null && result.detectedText!.trim().isNotEmpty) ...[
+            const SizedBox(height: Spacing.md),
+            _sectionCard(
+              context: context,
+              key: 'text',
+              title: l10n.sectionOcr,
+              child: SelectableText(
+                result.detectedText!,
+                style: const TextStyle(fontSize: 14, fontFamily: 'monospace', height: 1.5),
+              ),
+            ),
+          ],
+          const SizedBox(height: Spacing.md),
+          if (provider.selectedImageBytes != null)
+            _questionSection(context, provider, result.questions)
+          else if (result.questions.isNotEmpty)
+            _pastQuestionsReadOnly(context, result.questions),
+          const SizedBox(height: Spacing.xxl),
+        ];
+
         return Scaffold(
           appBar: AppBar(
             title: Text(l10n.resultAppBarTitle),
@@ -59,58 +109,48 @@ class _ResultScreenState extends State<ResultScreen> {
               ),
             ],
           ),
-          body: ListView(
-            padding: const EdgeInsets.all(Spacing.md),
-            children: [
-              if (result.isDemoMode) _demoBanner(context),
-              if (provider.selectedImageBytes != null)
-                _imagePreview(provider)
-              else if (result.thumbnailBase64 != null)
-                _thumbnailPreview(result.thumbnailBase64!),
-              const SizedBox(height: Spacing.md),
-              if (result.uncertaintyNote != null) _uncertaintyBanner(context, result.uncertaintyNote!),
-              _sectionCard(
-                context: context,
-                key: 'description',
-                title: l10n.sectionDescription,
-                trailing: ConfidenceBadge(band: result.confidenceBand),
-                child: Text(
-                  result.description,
-                  style: appFont(context, fontSize: 15, height: 1.5),
-                ),
-              ),
-              const SizedBox(height: Spacing.md),
-              _sectionCard(
-                context: context,
-                key: 'objects',
-                title: l10n.sectionObjects,
-                child: result.objects.isEmpty
-                    ? Text(l10n.noObjectsFound, style: appFont(context, color: mutedText(context)))
-                    : Wrap(
-                        spacing: Spacing.sm,
-                        runSpacing: Spacing.sm,
-                        children: result.objects.map((o) => ObjectTag(object: o)).toList(),
-                      ),
-              ),
-              if (result.detectedText != null && result.detectedText!.trim().isNotEmpty) ...[
-                const SizedBox(height: Spacing.md),
-                _sectionCard(
-                  context: context,
-                  key: 'text',
-                  title: l10n.sectionOcr,
-                  child: SelectableText(
-                    result.detectedText!,
-                    style: const TextStyle(fontSize: 14, fontFamily: 'monospace', height: 1.5),
+          body: LayoutBuilder(
+            builder: (context, constraints) {
+              // Above the wide breakpoint (desktop/web), the image and the
+              // analysis read side by side in a fixed-width centered shell —
+              // a real structural change, not a shrunk-down phone layout.
+              // Below it, the original single scrolling column.
+              final wide = constraints.maxWidth >= Spacing.breakpointWide;
+              if (!wide) {
+                return ListView(
+                  padding: const EdgeInsets.all(Spacing.md),
+                  children: [
+                    if (imageWidget != null) imageWidget,
+                    const SizedBox(height: Spacing.md),
+                    ...analysisSections,
+                  ],
+                );
+              }
+              return Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: Spacing.contentMaxWidth),
+                  child: Padding(
+                    padding: const EdgeInsets.all(Spacing.lg),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (imageWidget != null)
+                          SizedBox(
+                            width: 420,
+                            child: Padding(
+                              padding: const EdgeInsets.only(right: Spacing.lg),
+                              child: imageWidget,
+                            ),
+                          ),
+                        Expanded(
+                          child: ListView(children: analysisSections),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ],
-              const SizedBox(height: Spacing.md),
-              if (provider.selectedImageBytes != null)
-                _questionSection(context, provider, result.questions)
-              else if (result.questions.isNotEmpty)
-                _pastQuestionsReadOnly(context, result.questions),
-              const SizedBox(height: Spacing.xxl),
-            ],
+              );
+            },
           ),
         );
       },

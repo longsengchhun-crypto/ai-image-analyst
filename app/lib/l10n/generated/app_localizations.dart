@@ -176,6 +176,24 @@ abstract class AppLocalizations {
   /// **'Analyze image'**
   String get previewAnalyze;
 
+  /// No description provided for @uploadZoneTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a photo to analyze'**
+  String get uploadZoneTitle;
+
+  /// No description provided for @uploadZoneSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to browse your device'**
+  String get uploadZoneSubtitle;
+
+  /// No description provided for @uploadZoneFormats.
+  ///
+  /// In en, this message translates to:
+  /// **'JPG · PNG · WEBP'**
+  String get uploadZoneFormats;
+
   /// No description provided for @loadingAnalyzing.
   ///
   /// In en, this message translates to:
