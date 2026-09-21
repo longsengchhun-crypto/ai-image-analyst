@@ -26,6 +26,30 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', demoMode: config.isDemoMode, provider: config.activeProvider });
 });
 
+// The bare domain root has no meaning as an API endpoint, but people will
+// naturally visit it in a browser (this is a REST API, not a website) — a
+// short explanation beats a bare 404.
+app.get('/', (req, res) => {
+  res.json({
+    name: 'AI Image Analyst API',
+    description: 'Backend for the AI Image Understanding App. This is a REST API, not a webpage — there is no UI to view here.',
+    status: 'ok',
+    demoMode: config.isDemoMode,
+    provider: config.activeProvider,
+    healthCheck: '/api/health',
+    repository: 'https://github.com/longsengchhun-crypto/ai-image-analyst',
+    endpoints: [
+      'POST /api/auth/anonymous',
+      'POST /api/analyze-image',
+      'POST /api/ask-question',
+      'GET /api/history',
+      'GET /api/history/:id',
+      'DELETE /api/history/:id',
+      'DELETE /api/history',
+    ],
+  });
+});
+
 // Auth is app-key gated but does not require a JWT yet (it issues one).
 app.use('/api/auth', requireApiKey, authRoutes);
 
