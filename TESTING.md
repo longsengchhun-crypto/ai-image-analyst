@@ -2,12 +2,11 @@
 
 ## What was actually executed in this delivery
 
-Neither `GEMINI_API_KEY` nor `ANTHROPIC_API_KEY` was available during
-development, so live-model behavior on real blurry/dark/abstract photos was
-**not** observed — that's the one thing this delivery couldn't test itself,
-since both require a credential only the project owner can obtain (Gemini's
-is free — see AI_DOCUMENTATION.md). Everything else, including the entire
-Flutter app build/test/analyze pipeline, **was** executed and verified:
+A free `GEMINI_API_KEY` was obtained and set on Vercel production; live-model
+behavior was then verified end-to-end against the real Gemini API (not just
+the demo-mode placeholder path) — see the "Live Gemini verification" section
+below. Everything else, including the entire Flutter app build/test/analyze
+pipeline, **was** executed and verified:
 
 ### Backend (against the live production stack: Vercel + Neon)
 
@@ -15,13 +14,34 @@ Flutter app build/test/analyze pipeline, **was** executed and verified:
 |---|---|---|
 | Server boots, loads config | `node -e "require('./src/app.js')"` | ✅ Pass |
 | Migration applies to Neon | `npm run migrate` against the real `DATABASE_URL` | ✅ Pass — tables + trigger created |
-| `GET /api/health` | `curl` (local, then production) | ✅ `{"status":"ok","demoMode":true,"provider":"demo"}` |
+| `GET /api/health` | `curl` (local, then production) | ✅ `{"status":"ok","demoMode":false,"provider":"gemini"}` |
 | `x-api-key` gate rejects missing key | `curl` without header | ✅ 401 |
 | Anonymous auth issues JWT | `curl -X POST /api/auth/anonymous` | ✅ Row inserted in `users`, JWT returned |
-| `POST /api/analyze-image` (multipart upload) | `curl -F image=@test.png` | ✅ 201, demo-mode analysis returned, row inserted in `image_history` |
-| `POST /api/ask-question` appends to history | `curl -F image=... -F question=... -F historyId=...` | ✅ Q&A appended to `user_questions` JSONB |
+| `POST /api/analyze-image` (multipart upload) | `curl -F image=@test.png` | ✅ 201, real Gemini analysis returned, row inserted in `image_history` |
+| `POST /api/ask-question` appends to history | `curl -F image=... -F question=... -F historyId=...` | ✅ Real grounded answer, Q&A appended to `user_questions` JSONB |
 | `GET /api/history` returns persisted row with nested Q&A | `curl` | ✅ Confirmed round-trip through Postgres JSONB |
-| Same sequence against the **production** Vercel deployment | `curl` against `https://ai-image-analyst-backend.vercel.app` | ✅ Health, auth, and history all confirmed live |
+| Same sequence against the **production** Vercel deployment | `curl` against `https://ai-image-analyst-backend.vercel.app` | ✅ Health, auth, analyze, ask-question, and history all confirmed live with real AI output |
+
+### Live Gemini verification
+
+Once `GEMINI_API_KEY` was set on Vercel production and redeployed:
+
+- `GET /api/health` flipped from `demoMode: true` to `{"status":"ok","demoMode":false,"provider":"gemini"}`.
+- A real image posted to `/api/analyze-image` on production returned an actual
+  Gemini-generated description (not the fixed demo-mode placeholder text),
+  HTTP 201.
+- A follow-up posted to `/api/ask-question` with the same image returned a
+  real grounded answer, HTTP 200.
+- Production logs (`vercel logs`) surfaced two real issues, both fixed and
+  redeployed before this was considered done:
+  1. `express-rate-limit` was misidentifying client IPs because Express's
+     `trust proxy` setting was left at its default behind Vercel's proxy —
+     fixed with `app.set('trust proxy', 1)`.
+  2. The very first live request hit a transient Gemini `503 UNAVAILABLE`
+     ("model overloaded") and surfaced as a hard failure — fixed by adding
+     automatic retry (up to 3 attempts, backoff) on 429/500/503.
+- Re-ran the same analyze + ask-question sequence after both fixes: clean
+  201/200 responses, no retries needed on that run.
 
 ### Flutter app (Flutter 3.47.5 stable, installed and used in this delivery)
 
@@ -95,16 +115,16 @@ device/emulator is the one manual check worth doing before a live demo.
 
 This proves the plumbing — upload handling, image normalization, JWT/API-key
 auth, Postgres persistence (including JSONB append), serverless deployment,
-and the entire Flutter app build/UI — is correct and production-ready. It
-does **not** prove the AI's description/object/VQA quality on any specific
-image, since demo mode returns fixed placeholder text rather than calling a
-live model.
+and the entire Flutter app build/UI — is correct and production-ready. With
+`GEMINI_API_KEY` now set on production (see "Live Gemini verification"
+above), a real image posted through this same pipeline returns a real
+Gemini-generated description, not placeholder text.
 
-## Edge-case matrix: expected behavior per the prompt contract (re-run once a key is set)
+## Edge-case matrix: expected behavior per the prompt contract
 
 The table below is derived directly from the system prompts in
 `AI_DOCUMENTATION.md` and states what the contract *requires* the model to
-do. Once `GEMINI_API_KEY` (free) or `ANTHROPIC_API_KEY` is configured,
+do. With `GEMINI_API_KEY` now configured on production,
 re-run each case with a real photo, record the actual `description` /
 `objects` / `uncertaintyNote`
 output, and replace the "Expected" column with "Observed."

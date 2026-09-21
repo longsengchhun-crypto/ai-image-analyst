@@ -313,8 +313,8 @@ an interactive browser session is the one check worth doing by hand.
   `vercel deploy --prod --yes`. Until someone sets Root Directory to
   `backend` in the dashboard, deploys are manual and reliable
   (`cd backend && vercel deploy --prod --yes`) rather than automatic and
-  fragile. Neither `GEMINI_API_KEY` nor `ANTHROPIC_API_KEY` is set yet
-  (demo mode) — see §12.
+  fragile. `GEMINI_API_KEY` is now set on production — the backend returns
+  real AI analysis, not demo mode — see §12.
 - **Database**: Neon Postgres, migrated via `npm run migrate`
   (`backend/src/migrate.js` applies `migrations/schema.sql` idempotently).
 - **Source control**: pushed to GitHub. `.gitignore` excludes `.env`,

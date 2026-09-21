@@ -49,33 +49,34 @@ works identically on an iPhone's Safari.
 | Backend API | Node.js + Express | Complete, tested against live DB — see [backend/](backend/) |
 | Database | Postgres on Neon | Migrated and live |
 | Hosting | Vercel (serverless) | **Deployed**: `https://ai-image-analyst-backend.vercel.app` |
-| AI provider | Google Gemini (free) or Anthropic Claude Vision | Pluggable; demo mode when no key is set |
+| AI provider | Google Gemini (`gemini-flash-latest`) | **Live** — real AI analysis, not demo mode |
 
 ## Live backend
 
 ```
 Base URL: https://ai-image-analyst-backend.vercel.app
-Health check: GET /api/health -> {"status":"ok","demoMode":true,"provider":"demo"}
+Health check: GET /api/health -> {"status":"ok","demoMode":false,"provider":"gemini"}
 ```
 
-`demoMode: true` means no AI key is configured yet, so `/api/analyze-image`
-and `/api/ask-question` currently return clearly-labeled placeholder
-responses instead of live AI output. **The rest of the pipeline — auth,
-image upload, Postgres persistence, history, delete — is fully live and was
-verified end-to-end against the production Neon database**, including a
-seeded history entry with a follow-up question, visible in the running app
-(see screenshots below).
+`demoMode: false` means a real Gemini API key is configured in production, so
+`/api/analyze-image` and `/api/ask-question` return real AI-generated output —
+verified with live end-to-end calls against the production URL (a real
+description, detected objects, and a grounded follow-up answer, not
+placeholders). **The rest of the pipeline — auth, image upload, Postgres
+persistence, history, delete — is fully live too**, verified end-to-end
+against the production Neon database, including a seeded history entry with a
+follow-up question, visible in the running app (see screenshots below).
 
-### Turning on real AI analysis — free option (recommended)
+A transient "model overloaded" 503 from Gemini was observed once in
+production logs during testing — the backend now retries automatically (up to
+3 attempts with backoff) on 429/500/503 before surfacing an error, so a brief
+spike in demand no longer surfaces as a failure to the user.
 
-1. Go to [aistudio.google.com/apikey](https://aistudio.google.com/apikey),
-   sign in with any Google account, click "Create API key." No credit card,
-   no payment required for the free tier.
-2. ```bash
-   vercel env add GEMINI_API_KEY production   # paste the key
-   cd backend && vercel deploy --prod --yes
-   ```
-
+If you ever need to swap providers or rotate the key:
+```bash
+vercel env add GEMINI_API_KEY production   # paste the new key
+cd backend && vercel deploy --prod --yes
+```
 Anthropic Claude Vision works identically if you set `ANTHROPIC_API_KEY`
 instead (Gemini is checked first if both are set).
 
@@ -95,7 +96,7 @@ This was not left as an on-paper design — everything below was actually run:
   pick-a-photo → analyze → view-result run against the live backend, with no
   data pre-loaded. See `docs/screenshots/` (`07`–`09` are the fresh-capture
   run) and `PROJECT_REPORT.md` §9.
-- **Three real bugs found and fixed** by actually running the app end to
+- **Five real bugs found and fixed** by actually running the app end to
   end, not just reading the code:
   1. A `RenderFlex overflowed by 7.0 pixels` layout bug on short viewports —
      the Analyze screen's guidance content wasn't scrollable.
@@ -107,6 +108,14 @@ This was not left as an on-paper design — everything below was actually run:
      a **successful** AI analysis into an error screen, discarding a correct
      result the user had already received. This could in principle have hit
      mobile too, not just web — see TESTING.md for the full explanation and fix.
+  4. Found only after switching on the real Gemini key and inspecting Vercel's
+     production logs: Express's `trust proxy` setting was left at its default
+     (`false`) behind Vercel's proxy, which made `express-rate-limit`
+     misidentify every request's source IP. Fixed with `app.set('trust proxy', 1)`.
+  5. A transient Gemini `503 UNAVAILABLE` ("model overloaded") surfaced as a
+     hard failure to the user on the very first live production request.
+     Fixed by retrying automatically up to 3 times with backoff on
+     429/500/503 before giving up.
 - **Full English/Khmer localization**, verified with a real widget test that
   switches the app to Khmer and asserts the UI actually re-renders in Khmer
   (not just that the translation files parse) — see
