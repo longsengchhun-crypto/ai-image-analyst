@@ -11,6 +11,26 @@ description, a list of detected objects, OCR text extraction, and grounded
 answers to free-form questions about the image — with honest confidence
 messaging throughout, never a bare "I don't know."
 
+## Preview on your phone
+
+This app is built with **Flutter**, not React Native/Expo — **Expo Go
+cannot open it**, at any SDK version, the same way an iOS app can't run
+inside an Android launcher. It's a different runtime entirely (Expo Go
+loads a JavaScript bundle; Flutter compiles to its own Skia/Impeller
+engine). Two options that actually work from a phone:
+
+1. **Open in your phone's browser, no install**:
+   https://ai-image-analyst-web.vercel.app — full app UI, works
+   immediately. Camera capture needs a device with a camera; gallery
+   picking works everywhere.
+2. **Install the real native app** (full camera/gallery access, faster,
+   works offline for cached history): download the release APK from
+   [the latest GitHub release](https://github.com/longsengchhun-crypto/ai-image-analyst/releases/latest)
+   onto an Android phone and install it (Android will prompt to allow
+   "install unknown apps" for your browser — that's expected for a
+   non-Play-Store APK). iOS has no equivalent side-load path without a
+   paid Apple Developer account and Xcode signing.
+
 | Layer | Tech | Status |
 |---|---|---|
 | Mobile app | Flutter (Dart) | **Verified**: `flutter analyze` clean, tests pass, release APK builds — see [app/](app/) |
