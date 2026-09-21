@@ -112,6 +112,13 @@ function demoAnswer(question) {
 // ---------------------------------------------------------------------------
 // Gemini backend (Google AI Studio — free tier)
 // ---------------------------------------------------------------------------
+const GEMINI_MAX_ATTEMPTS = 3;
+const GEMINI_RETRY_STATUS = new Set([429, 500, 503]);
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 async function callGemini(systemPrompt, userText, imageBuffer, mediaType) {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${config.geminiModel}:generateContent?key=${config.geminiApiKey}`;
 
@@ -133,16 +140,24 @@ async function callGemini(systemPrompt, userText, imageBuffer, mediaType) {
     },
   };
 
-  const resp = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
+  let resp;
+  for (let attempt = 1; attempt <= GEMINI_MAX_ATTEMPTS; attempt += 1) {
+    resp = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
 
-  if (!resp.ok) {
+    if (resp.ok) break;
+
     const errText = await resp.text().catch(() => '');
-    console.error(`[visionProvider] Gemini API error ${resp.status}:`, errText);
-    throw new Error('AI provider request failed.');
+    console.error(`[visionProvider] Gemini API error ${resp.status} (attempt ${attempt}/${GEMINI_MAX_ATTEMPTS}):`, errText);
+
+    const shouldRetry = GEMINI_RETRY_STATUS.has(resp.status) && attempt < GEMINI_MAX_ATTEMPTS;
+    if (!shouldRetry) {
+      throw new Error('AI provider request failed.');
+    }
+    await sleep(500 * attempt);
   }
 
   const data = await resp.json();

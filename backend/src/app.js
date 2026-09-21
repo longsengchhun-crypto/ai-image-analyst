@@ -14,6 +14,11 @@ const questionRoutes = require('./routes/question');
 
 const app = express();
 
+// Running behind Vercel's proxy: trust exactly one hop so express-rate-limit
+// reads the real client IP from X-Forwarded-For instead of misidentifying
+// every request as coming from the proxy.
+app.set('trust proxy', 1);
+
 app.use(
   cors({
     origin: config.corsOrigins.includes('*') ? true : config.corsOrigins,
