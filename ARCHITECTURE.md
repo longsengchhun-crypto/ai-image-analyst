@@ -17,10 +17,10 @@
 └──────────────┬─────────────┘                                        │               │                │
                │ camera / gallery                                     ▼               ▼                │
                │ (image_picker)                              ┌─────────────┐   ┌───────────────┐        │
-               ▼                                             │ Neon        │   │ Anthropic      │        │
+               ▼                                             │ Neon        │   │ Gemini /       │        │
      On-device compression                                   │ Postgres    │   │ Claude Vision  │        │
      (flutter_image_compress)                                 │ (pooled     │   │ (multimodal    │        │
-                                                               │ connection) │   │ messages API)  │        │
+                                                               │ connection) │   │ REST/SDK call) │        │
                                                                └─────────────┘   └───────────────┘        │
                                                                                                             │
                                                                image_history table stores:                 │
@@ -44,7 +44,7 @@
 4. On the backend: `multer` receives the upload into memory → `sharp`
    re-normalizes it (EXIF-safe rotate, cap long edge, re-encode JPEG, build a
    256px thumbnail) → `visionProvider.analyzeImage()` sends the normalized
-   bytes to Claude with a structured-JSON system prompt → the parsed result
+   bytes to Gemini (or Claude, whichever key is configured) with a structured-JSON system prompt → the parsed result
    (description, objects, OCR text, confidence bands, uncertainty note) is
    written to the `image_history` table in Neon Postgres, scoped to the
    caller's `user_id`.
@@ -58,7 +58,7 @@
 
 ## Why this shape
 
-- **Backend-mediated AI calls**: the Flutter client never talks to Anthropic
+- **Backend-mediated AI calls**: the Flutter client never talks to Gemini or Anthropic
   directly. This keeps the AI provider's API key server-side only, lets us
   rate-limit and validate uploads centrally, and means swapping providers
   (e.g. adding Google Cloud Vision for true bounding boxes) is a change

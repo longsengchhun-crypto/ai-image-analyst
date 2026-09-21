@@ -2,12 +2,28 @@
 
 ## Which AI service, and why
 
-**Provider: Anthropic Claude (multimodal "vision" messages API)**, called
-server-side from `backend/src/services/visionProvider.js`.
+**Two pluggable providers, both multimodal "vision" LLMs, selected
+automatically by which API key is configured** in
+`backend/src/services/visionProvider.js`:
+
+1. **Google Gemini** (`gemini-2.0-flash`, via the Google AI Studio REST API)
+   — used if `GEMINI_API_KEY` is set. **This is the recommended default**
+   because Google AI Studio issues a genuinely free API key (no credit card,
+   generous free-tier quota), which makes it the practical choice for a
+   student/portfolio project: get one at
+   [aistudio.google.com/apikey](https://aistudio.google.com/apikey) in about
+   two minutes.
+2. **Anthropic Claude Vision** (`claude-fable-5-1`) — used instead if
+   `ANTHROPIC_API_KEY` is set (and no Gemini key is present). Fully
+   supported as a drop-in alternative for anyone who already has an
+   Anthropic account.
+
+If neither key is set, the backend runs in **demo mode** (see below).
 
 The assignment explicitly allows "Google Cloud Vision API (recommended) or
-OpenAI's GPT-4V / Claude Vision." We chose Claude Vision over the
-Cloud-Vision-plus-separate-LLM combination for three reasons:
+OpenAI's GPT-4V / Claude Vision." We chose a single multimodal LLM (Gemini or
+Claude) over the Cloud-Vision-plus-separate-LLM combination for three
+reasons:
 
 1. **One provider, one API key, one coherent confidence story.** Cloud
    Vision's `LABEL_DETECTION` returns calibrated numeric scores, but bolting
@@ -15,20 +31,20 @@ Cloud-Vision-plus-separate-LLM combination for three reasons:
    systems. A single multimodal call gives description, object list, OCR
    summary, and (on follow-up) grounded Q&A from one model, one prompt
    contract, one honesty standard.
-2. **Operational simplicity.** One provider credential to manage, one
-   billing relationship, one rate limit to reason about — appropriate for an
-   MVP built by a small team.
-3. **Documented tradeoff, not a blind spot.** Claude does not return
-   pixel-precise bounding boxes the way Cloud Vision's
+2. **Operational simplicity, and a genuinely free path.** One provider
+   credential to manage, one rate limit to reason about, and — critically
+   for a student project with no budget — Gemini's free tier means the app
+   can run with live AI results at zero cost.
+3. **Documented tradeoff, not a blind spot.** Neither Gemini nor Claude
+   returns pixel-precise bounding boxes the way Cloud Vision's
    `OBJECT_LOCALIZATION` does. Object detection here is a **labeled list
    with a self-reported qualitative confidence band**, not geometric boxes.
    If bounding-box overlays become a requirement, Cloud Vision's
    `OBJECT_LOCALIZATION` can be added as a second call inside
-   `visionProvider.js` without touching any other layer — the provider is
-   already isolated behind `analyzeImage()` / `askQuestion()`.
-
-Model used: `claude-fable-5-1` (configurable via the `ANTHROPIC_MODEL` env
-var without a code change).
+   `visionProvider.js` without touching any other layer — both providers are
+   already isolated behind the shared `analyzeImage()` / `askQuestion()`
+   functions, which return the exact same JSON contract regardless of which
+   backend produced it.
 
 ## Confidence messaging — what the numbers actually mean
 
@@ -135,8 +151,9 @@ credential/provider for the whole MVP.
 
 ## Demo mode (no API key configured)
 
-`GET /api/health` reports `demoMode: true/false` based on whether
-`ANTHROPIC_API_KEY` is set. When it's unset, `analyzeImage()` and
+`GET /api/health` reports `demoMode: true/false` and `provider: "gemini" |
+"anthropic" | "demo"` based on which key (if any) is set. When neither key is
+set, `analyzeImage()` and
 `askQuestion()` in `visionProvider.js` return clearly-labeled canned
 responses (`isDemoMode: true`) instead of calling Anthropic. This lets the
 full pipeline — upload, compression, Postgres persistence, history,

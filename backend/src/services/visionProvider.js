@@ -1,19 +1,27 @@
 // AI vision provider abstraction.
 //
-// Why Claude Vision (Anthropic) instead of Google Cloud Vision + a separate LLM:
-// the spec allows either "Google Cloud Vision API (recommended) or OpenAI's
-// GPT-4V / Claude Vision". A single multimodal model call gives us description,
-// object listing, OCR summary AND grounded Q&A from one provider/one API key,
-// which is simpler to operate and keeps the whole analysis under one coherent
-// "confidence" story. The documented tradeoff (see AI_DOCUMENTATION.md) is that
-// Claude does not return pixel-precise bounding boxes the way Cloud Vision's
+// Two backends are supported, selected automatically by which API key is
+// configured (see config.js: Gemini is preferred if GEMINI_API_KEY is set,
+// otherwise Anthropic if ANTHROPIC_API_KEY is set, otherwise demo mode).
+//
+// Why Gemini as the default recommendation: Google AI Studio issues a
+// genuinely free API key (no credit card, generous free-tier quota), which
+// makes it the practical choice for a student/portfolio project. Claude
+// Vision remains fully supported as a drop-in alternative — same prompts,
+// same response contract — for anyone who already has an Anthropic key.
+//
+// Why either of these over Google Cloud Vision + a separate LLM: the spec
+// allows "Google Cloud Vision API (recommended) or OpenAI's GPT-4V / Claude
+// Vision." A single multimodal model call gives description, object
+// listing, OCR summary AND grounded Q&A from one provider/one API key. The
+// documented tradeoff (see AI_DOCUMENTATION.md) is that neither Gemini nor
+// Claude returns pixel-precise bounding boxes the way Cloud Vision's
 // OBJECT_LOCALIZATION does — object detection here is a labeled list with a
-// self-reported confidence band, not geometric boxes. Swapping in Cloud Vision
-// for the labeling step later is a drop-in change confined to this file.
+// self-reported confidence band, not geometric boxes.
 const Anthropic = require('@anthropic-ai/sdk');
 const config = require('../config');
 
-const client = config.anthropicApiKey ? new Anthropic({ apiKey: config.anthropicApiKey }) : null;
+const anthropicClient = config.anthropicApiKey ? new Anthropic({ apiKey: config.anthropicApiKey }) : null;
 
 const CONFIDENCE_BANDS = {
   high: 0.92,
@@ -25,8 +33,9 @@ function bandToScore(band) {
   return CONFIDENCE_BANDS[band] ?? 0.5;
 }
 
-// The structured-output contract we ask Claude to fill. Kept intentionally
-// simple/flat so it is cheap to validate and safe to store as JSONB.
+// The structured-output contract we ask the model to fill. Kept
+// intentionally simple/flat so it is cheap to validate and safe to store as
+// JSONB, and identical across both providers.
 const ANALYSIS_SYSTEM_PROMPT = `You are a careful, honest visual-analysis assistant embedded in an
 accessibility and productivity app. You will be shown one image. Respond with ONLY a single JSON
 object (no markdown fences, no commentary) matching exactly this shape:
@@ -67,8 +76,8 @@ Only answer based on what is visually verifiable in the image. If you cannot tel
 and use a low confidence band rather than guessing.`;
 
 function extractJson(text) {
-  // Claude is instructed to return raw JSON, but defensively strip any
-  // accidental markdown fencing before parsing.
+  // Defensively strip any accidental markdown fencing before parsing, even
+  // though both providers are instructed to return raw JSON.
   const cleaned = text.trim().replace(/^```(json)?/i, '').replace(/```$/, '').trim();
   return JSON.parse(cleaned);
 }
@@ -76,9 +85,9 @@ function extractJson(text) {
 function demoAnalysis() {
   return {
     description:
-      'DEMO MODE (no ANTHROPIC_API_KEY configured): this is a placeholder analysis so the app ' +
-      'remains fully testable end-to-end. It shows what a real response looks like — a short, ' +
-      'natural-language description of the uploaded image would appear here.',
+      'DEMO MODE (no GEMINI_API_KEY or ANTHROPIC_API_KEY configured): this is a placeholder ' +
+      'analysis so the app remains fully testable end-to-end. It shows what a real response ' +
+      'looks like — a short, natural-language description of the uploaded image would appear here.',
     objects: [
       { name: 'sample object A', confidenceBand: 'high' },
       { name: 'sample object B', confidenceBand: 'medium' },
@@ -86,18 +95,89 @@ function demoAnalysis() {
     ],
     detectedText: null,
     overallConfidenceBand: 'medium',
-    uncertaintyNote: 'Running in demo mode — set ANTHROPIC_API_KEY on the backend for live analysis.',
+    uncertaintyNote: 'Running in demo mode — set GEMINI_API_KEY (free, see README) or ANTHROPIC_API_KEY on the backend for live analysis.',
     isDemoMode: true,
   };
 }
 
 function demoAnswer(question) {
   return {
-    answer: `DEMO MODE: a grounded answer to "${question}" would appear here once ANTHROPIC_API_KEY is configured.`,
+    answer: `DEMO MODE: a grounded answer to "${question}" would appear here once a live AI key is configured.`,
     confidenceBand: 'medium',
-    uncertaintyNote: 'Running in demo mode — set ANTHROPIC_API_KEY on the backend for live answers.',
+    uncertaintyNote: 'Running in demo mode — set GEMINI_API_KEY (free, see README) or ANTHROPIC_API_KEY on the backend for live answers.',
     isDemoMode: true,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Gemini backend (Google AI Studio — free tier)
+// ---------------------------------------------------------------------------
+async function callGemini(systemPrompt, userText, imageBuffer, mediaType) {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${config.geminiModel}:generateContent?key=${config.geminiApiKey}`;
+
+  const body = {
+    systemInstruction: { parts: [{ text: systemPrompt }] },
+    contents: [
+      {
+        role: 'user',
+        parts: [
+          { inline_data: { mime_type: mediaType, data: imageBuffer.toString('base64') } },
+          { text: userText },
+        ],
+      },
+    ],
+    generationConfig: {
+      responseMimeType: 'application/json',
+      temperature: 0.4,
+      maxOutputTokens: 1024,
+    },
+  };
+
+  const resp = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+
+  if (!resp.ok) {
+    const errText = await resp.text().catch(() => '');
+    console.error(`[visionProvider] Gemini API error ${resp.status}:`, errText);
+    throw new Error('AI provider request failed.');
+  }
+
+  const data = await resp.json();
+  const text = data.candidates?.[0]?.content?.parts?.find((p) => p.text)?.text;
+  if (!text) {
+    console.error('[visionProvider] Gemini returned no text content:', JSON.stringify(data).slice(0, 500));
+    throw new Error('AI provider returned an empty response.');
+  }
+  return extractJson(text);
+}
+
+// ---------------------------------------------------------------------------
+// Anthropic backend (Claude Vision)
+// ---------------------------------------------------------------------------
+async function callAnthropic(systemPrompt, userText, imageBuffer, mediaType) {
+  const message = await anthropicClient.messages.create({
+    model: config.anthropicModel,
+    max_tokens: 1024,
+    system: systemPrompt,
+    messages: [
+      {
+        role: 'user',
+        content: [
+          {
+            type: 'image',
+            source: { type: 'base64', media_type: mediaType, data: imageBuffer.toString('base64') },
+          },
+          { type: 'text', text: userText },
+        ],
+      },
+    ],
+  });
+
+  const raw = message.content.find((c) => c.type === 'text')?.text || '{}';
+  return extractJson(raw);
 }
 
 /**
@@ -106,58 +186,31 @@ function demoAnswer(question) {
  * @param {string} mediaType - e.g. 'image/jpeg'
  */
 async function analyzeImage(imageBuffer, mediaType) {
-  if (!client) return demoAnalysis();
-
-  const message = await client.messages.create({
-    model: config.anthropicModel,
-    max_tokens: 1024,
-    system: ANALYSIS_SYSTEM_PROMPT,
-    messages: [
-      {
-        role: 'user',
-        content: [
-          {
-            type: 'image',
-            source: { type: 'base64', media_type: mediaType, data: imageBuffer.toString('base64') },
-          },
-          { type: 'text', text: 'Analyze this image according to your instructions.' },
-        ],
-      },
-    ],
-  });
-
-  const raw = message.content.find((c) => c.type === 'text')?.text || '{}';
-  const parsed = extractJson(raw);
-  return { ...parsed, isDemoMode: false };
+  if (config.activeProvider === 'gemini') {
+    const parsed = await callGemini(ANALYSIS_SYSTEM_PROMPT, 'Analyze this image according to your instructions.', imageBuffer, mediaType);
+    return { ...parsed, isDemoMode: false };
+  }
+  if (config.activeProvider === 'anthropic') {
+    const parsed = await callAnthropic(ANALYSIS_SYSTEM_PROMPT, 'Analyze this image according to your instructions.', imageBuffer, mediaType);
+    return { ...parsed, isDemoMode: false };
+  }
+  return demoAnalysis();
 }
 
 /**
  * Answer a free-form question about an already-analyzed image.
  */
 async function askQuestion(imageBuffer, mediaType, question) {
-  if (!client) return demoAnswer(question);
-
-  const message = await client.messages.create({
-    model: config.anthropicModel,
-    max_tokens: 512,
-    system: VQA_SYSTEM_PROMPT,
-    messages: [
-      {
-        role: 'user',
-        content: [
-          {
-            type: 'image',
-            source: { type: 'base64', media_type: mediaType, data: imageBuffer.toString('base64') },
-          },
-          { type: 'text', text: `Question: ${question}` },
-        ],
-      },
-    ],
-  });
-
-  const raw = message.content.find((c) => c.type === 'text')?.text || '{}';
-  const parsed = extractJson(raw);
-  return { ...parsed, isDemoMode: false };
+  const userText = `Question: ${question}`;
+  if (config.activeProvider === 'gemini') {
+    const parsed = await callGemini(VQA_SYSTEM_PROMPT, userText, imageBuffer, mediaType);
+    return { ...parsed, isDemoMode: false };
+  }
+  if (config.activeProvider === 'anthropic') {
+    const parsed = await callAnthropic(VQA_SYSTEM_PROMPT, userText, imageBuffer, mediaType);
+    return { ...parsed, isDemoMode: false };
+  }
+  return demoAnswer(question);
 }
 
 module.exports = { analyzeImage, askQuestion, bandToScore };

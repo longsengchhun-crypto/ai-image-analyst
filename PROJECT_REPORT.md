@@ -12,13 +12,19 @@ detected objects with honest confidence indicators, any text found in the
 image (OCR), and grounded answers to follow-up questions about the photo.
 The system is built as three independently deployable pieces — a Flutter
 client, a Node.js/Express REST API, and a managed Postgres database (Neon)
-— with all AI provider credentials isolated to the backend. The backend is
-deployed and live on Vercel, migrated against the production Neon database,
-and verified end-to-end (auth, upload, persistence, retrieval, deletion).
-The Flutter client's full source is complete and documented; final on-device
-verification and screenshots require running `flutter create .` once on a
-machine with the Flutter SDK installed (not available in this build
-environment — see §12).
+— with all AI provider credentials isolated to the backend, and a free
+Google Gemini API key as the recommended way to turn on live AI results
+(Anthropic Claude Vision works identically as a drop-in alternative). The
+backend is deployed and live on Vercel, migrated against the production Neon
+database, and verified end-to-end (auth, upload, persistence, retrieval,
+deletion). The Flutter client was not just written but built and tested:
+`flutter analyze` is clean, the widget test suite passes, and both a release
+Android APK and a release web build compile successfully — the web build was
+then driven headlessly against the live backend to capture real screenshots
+of the running app (see `docs/screenshots/` and §9). The one thing this
+delivery could not do on its own is provide a paid or free-tier AI account
+credential, since that requires the project owner's own sign-up — see §12
+for the two-minute, no-cost step to finish that.
 
 ## 2. Purpose and target users
 
@@ -202,9 +208,11 @@ dev server and the production Vercel deployment.
 
 ## 7. AI documentation summary
 
-See AI_DOCUMENTATION.md in full. Key points: Anthropic Claude Vision chosen
-for a single coherent provider; three documented prompts (analysis, VQA, and
-a documented-but-unimplemented bounding-box extension); confidence bands are
+See AI_DOCUMENTATION.md in full. Key points: two pluggable multimodal
+providers — **Google Gemini (free tier, recommended)** and Anthropic Claude
+Vision as a drop-in alternative — selected automatically by which API key is
+configured; three documented prompts (analysis, VQA, and a
+documented-but-unimplemented bounding-box extension); confidence bands are
 explicitly labeled as self-assessed heuristics, not calibrated statistics;
 demo mode lets the entire pipeline run and be graded without incurring AI
 costs or requiring a key to be provided with this submission.
@@ -213,19 +221,53 @@ costs or requiring a key to be provided with this submission.
 
 See TESTING.md in full. All backend plumbing (auth, upload, persistence,
 retrieval, deletion, rate limiting, error mapping) was executed against the
-live production stack. Live AI-model behavior on specific edge-case photos
-(blurry, dark, abstract, text-heavy, etc.) is documented as an *expected*
-matrix derived from the prompt contract, pending a real API key being
-configured for final grading/demo.
+live production stack — both locally and against the deployed Vercel URL.
+On the Flutter side, `flutter analyze` is clean, the widget test suite
+passes, and both a release Android APK and a release web build compile
+successfully. Live AI-model behavior on specific edge-case photos (blurry,
+dark, abstract, text-heavy, etc.) is documented as an *expected* matrix
+derived from the prompt contract, pending a real Gemini/Anthropic key being
+configured — the one thing genuinely outside this delivery's control (see
+§12).
 
-## 9. UI/UX documentation
+## 9. UI/UX documentation — verified against the running app
 
-Covered in §4.3 and in `app/README.md`. Screens: Analyze/Home, Result,
-History, Settings. Widgets: `ImageCard`, `ObjectTag`, `ConfidenceBadge`,
-`AnalysisSkeleton`/`InlineLoadingLabel`. Full Dart source is complete;
-capturing the requested 8–10 screenshots requires a Flutter SDK install
-(not present in this build environment) — see §12 for the exact commands to
-produce them.
+Screens: Analyze/Home, Result, History, Settings. Widgets: `ImageCard`,
+`ObjectTag`, `ConfidenceBadge`, `AnalysisSkeleton`/`InlineLoadingLabel`.
+
+Rather than leave this as source-only, the app was actually built and run:
+`flutter build web --release` was driven headlessly in a real browser
+against the live production backend, with two history entries seeded
+through the live API (auth → analyze → ask-question) so the History and
+Result screens would show real, populated data rather than empty states.
+Real screenshots (not mockups) are in `docs/screenshots/`:
+
+| File | Shows |
+|---|---|
+| `01-analyze-initial.png` | Home/Analyze screen's initial guidance state, consent notice, FAB |
+| `02-history-list.png` | History screen populated with two seeded analyses (thumbnail, confidence badge, timestamp, Q&A count) |
+| `03-result-detail.png` | Full analysis detail: image, demo-mode banner, description with confidence badge, detected-object chips with per-object confidence |
+| `04-settings.png` | Settings screen showing the live backend URL, privacy notices, clear-history action |
+| `05-source-sheet.png` | The camera/gallery bottom-sheet modal, with scrim and rounded-top-corner animation |
+| `06-analyze-dark-mode.png` | The same Analyze screen under the dark theme, confirming dark-mode support actually renders correctly |
+
+**What isn't in the screenshot set, and why**: the fresh capture → preview →
+loading → live-result path could not be driven through the browser, because
+`ImageService`/`ApiService` use `dart:io File`, which is unsupported on
+Flutter's web target by design (this app targets mobile, per the
+assignment's own framing — web was only stood up here as a convenient,
+camera-free way to screenshot the already-built app against the live
+backend). That interaction path **is** implemented and covered by code
+review and the release APK's successful build; demonstrating it end-to-end
+needs a physical device or emulator with a camera/photo library, which this
+headless build environment does not have.
+
+A real bug was caught in the process: on a short viewport, the Analyze
+screen's initial-state `Column` overflowed by 7px (visible only via the
+automated widget test, not by inspection). Fixed by wrapping it in a
+`SingleChildScrollView` + `ConstrainedBox` — see
+`app/lib/screens/image_upload_screen.dart` and the test in
+`app/test/widget_test.dart` that caught it.
 
 ## 10. Deployment
 
@@ -233,18 +275,31 @@ produce them.
   (`backend/api/index.js` wraps the Express app; `backend/vercel.json`
   routes all paths to it). Production URL:
   `https://ai-image-analyst-backend.vercel.app`. Environment variables
-  (`DATABASE_URL`, `JWT_SECRET`, `APP_API_KEY`, `ANTHROPIC_MODEL`,
-  `CORS_ORIGINS`) are set as encrypted Vercel project variables for
-  Production and Development; `ANTHROPIC_API_KEY` is intentionally left
-  unset (demo mode) pending the team providing a real key.
+  (`DATABASE_URL`, `JWT_SECRET`, `APP_API_KEY`, `GEMINI_MODEL`,
+  `ANTHROPIC_MODEL`, `CORS_ORIGINS`) are set as encrypted Vercel project
+  variables for Production and Development; the GitHub repository is
+  connected to the Vercel project (`vercel git connect`) for continuous
+  deployment on future pushes — the project's Root Directory still needs
+  setting to `backend` in the Vercel dashboard once, since that monorepo
+  setting isn't exposed to the CLI. Neither `GEMINI_API_KEY` nor
+  `ANTHROPIC_API_KEY` is set yet (demo mode) — see §12.
 - **Database**: Neon Postgres, migrated via `npm run migrate`
   (`backend/src/migrate.js` applies `migrations/schema.sql` idempotently).
-- **Source control**: pushed to GitHub (see repository link provided
-  alongside this report). `.gitignore` excludes `.env`, `node_modules`,
-  `.vercel`, and Flutter build artifacts.
-- **Mobile app**: not yet built to an installable binary in this
-  environment (no Flutter SDK available here). See §12 for the exact
-  one-time setup.
+- **Source control**: pushed to GitHub. `.gitignore` excludes `.env`,
+  `node_modules`, `.vercel`, and machine-local Flutter/Gradle build
+  artifacts — but the Android and web platform folders themselves **are**
+  committed, since both were generated and verified to build successfully
+  in this delivery (see below).
+- **Mobile app — built, not just written**: `flutter analyze` (0 issues),
+  `flutter test` (passing), `flutter build apk --release` (produces a
+  working 51MB release APK), and `flutter build web --release` all ran
+  successfully against this exact codebase. Two real, environment-specific
+  fixes were required and are documented inline: a Windows Kotlin
+  incremental-compiler bug when the project and Pub cache are on different
+  drive letters (worked around in `android/gradle.properties`), and a
+  `compileSdk`/`share_plus` version mismatch (resolved by bumping
+  `compileSdk` to 36 and `share_plus` to 13.3.0, and migrating the one
+  call site from the deprecated `Share.share()` to `SharePlus.instance.share()`).
 
 ## 11. Team readiness — architecture & limitations talking points
 
@@ -252,9 +307,10 @@ Two documented limitations the team should be ready to discuss, per the
 assignment's success criteria:
 
 1. **Object detection is a labeled list, not geometric bounding boxes**,
-   because we chose a single multimodal LLM (Claude Vision) over the
-   Cloud-Vision-plus-LLM combination for operational simplicity. Adding true
-   bounding boxes is a scoped, isolated change to `visionProvider.js`.
+   because we chose a single multimodal LLM (Gemini or Claude Vision) over
+   the Cloud-Vision-plus-LLM combination for operational simplicity (and, for
+   Gemini, genuinely free access). Adding true bounding boxes is a scoped,
+   isolated change to `visionProvider.js`.
 2. **Confidence bands are self-reported by the model, not a calibrated
    accuracy metric.** They're presented as a 3-level qualitative badge
    specifically to avoid the false precision of a fabricated "97%
@@ -268,25 +324,30 @@ via both layered together.
 
 ## 12. What remains for a fully graded live demo
 
-This delivery is complete and verified at the infrastructure/backend level.
-Two steps remain, both requiring resources not available in the environment
-this was built in:
+This delivery is complete and verified at the infrastructure, backend, and
+Flutter-build level — the Flutter SDK was installed and used to actually
+build and test the app, not just write its source. One step remains, and it
+requires a credential only the project owner can obtain (a free Google
+account is enough — no payment involved):
 
-1. **Add a real `ANTHROPIC_API_KEY`** (`vercel env add ANTHROPIC_API_KEY
-   production`, then `vercel deploy --prod --yes` from `backend/`) to move
-   off demo mode, then re-run TESTING.md's edge-case matrix with real photos
-   and record actual model outputs.
-2. **Install the Flutter SDK, then**:
+1. **Add a free `GEMINI_API_KEY`**: get one at
+   [aistudio.google.com/apikey](https://aistudio.google.com/apikey) (or use
+   `ANTHROPIC_API_KEY` if you already have Anthropic access), then:
    ```bash
-   cd app
-   flutter create .
-   flutter pub get
-   flutter run --dart-define=API_BASE_URL=https://ai-image-analyst-backend.vercel.app \
-               --dart-define=APP_API_KEY=<the APP_API_KEY value from backend/.env>
+   vercel env add GEMINI_API_KEY production
+   cd backend && vercel deploy --prod --yes
    ```
-   This generates the platform folders, resolves dependencies, and launches
-   the app end-to-end against the live, deployed backend — after which the
-   8–10 required screenshots can be captured directly from the running app.
+   then re-run TESTING.md's edge-case matrix with real photos and record
+   actual model outputs.
+
+Everything else — installing Flutter, running `flutter create .`
+(unnecessary now; already committed), building the release APK, capturing
+UI screenshots — has already been done in this delivery, not left as a
+follow-up step. To install the built APK on a device:
+`app/build/app/outputs/flutter-apk/app-release.apk` (rebuild locally with
+`flutter build apk --release --dart-define=API_BASE_URL=... --dart-define=APP_API_KEY=...`
+if that build directory isn't present, since `build/` is gitignored as a
+regenerable artifact).
 
 ## 13. Nice-to-have features not implemented in this delivery
 

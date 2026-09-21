@@ -23,7 +23,7 @@ app.use(express.json());
 app.use(generalLimiter);
 
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', demoMode: config.isDemoMode });
+  res.json({ status: 'ok', demoMode: config.isDemoMode, provider: config.activeProvider });
 });
 
 // Auth is app-key gated but does not require a JWT yet (it issues one).

@@ -20,9 +20,9 @@ class ConfidenceBadge extends StatelessWidget {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: compact ? 8 : 10, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.14),
+        color: color.withValues(alpha: 0.14),
         borderRadius: BorderRadius.circular(Radii.chip),
-        border: Border.all(color: color.withOpacity(0.4)),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

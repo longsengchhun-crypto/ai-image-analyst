@@ -12,20 +12,36 @@ npm-debug.log*
 .vercel
 
 # --- Flutter / Dart ---
+# android/ and web/ ARE committed (flutter create was run and both platforms
+# build successfully — see README/PROJECT_REPORT). ios/macos/linux/windows
+# were never generated in this environment, so they stay excluded until
+# `flutter create --platforms=ios,macos,...` is run on a machine that has
+# those toolchains.
 app/.dart_tool/
 app/.flutter-plugins
 app/.flutter-plugins-dependencies
 app/.packages
 app/build/
-app/android/
 app/ios/
 app/macos/
 app/linux/
 app/windows/
-app/web/
 app/.idea/
 app/*.iml
 app/pubspec.lock
+
+# Android build-time/local-machine files (never portable across machines)
+app/android/local.properties
+app/android/.gradle/
+app/android/.kotlin/
+app/android/app/debug
+app/android/app/profile
+app/android/app/release
+app/android/**/build/
+app/android/*.iml
+
+# Web build output (regenerate with `flutter build web`)
+app/web/build/
 
 # --- OS ---
 .DS_Store
@@ -34,3 +50,5 @@ Thumbs.db
 # --- Editors ---
 .vscode/
 .idea/
+
+.vercel

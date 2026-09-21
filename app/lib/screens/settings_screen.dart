@@ -61,7 +61,7 @@ class SettingsScreen extends StatelessWidget {
             icon: Icons.info_outline,
             title: 'AI Image Analyst',
             subtitle: 'v1.0.0 — description, object detection, and visual Q&A powered by '
-                'Claude Vision, with a documented demo mode for offline development.',
+                'Google Gemini (or Claude Vision), with a documented demo mode for offline development.',
           ),
         ],
       ),

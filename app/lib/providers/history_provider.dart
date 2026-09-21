@@ -19,7 +19,14 @@ class HistoryProvider extends ChangeNotifier {
   String? errorMessage;
 
   Future<void> loadInitial() async {
-    final cached = await _db.getAll();
+    List<ImageAnalysis> cached = [];
+    try {
+      cached = await _db.getAll();
+    } catch (_) {
+      // Local cache unavailable (e.g. platform channel not ready yet, or a
+      // plain widget-test environment with no sqflite plugin) — fall through
+      // to the network refresh below rather than crashing the app.
+    }
     if (cached.isNotEmpty) {
       items = cached;
       status = HistoryStatus.loaded;

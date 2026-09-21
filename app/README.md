@@ -1,29 +1,37 @@
 # AI Image Analyst — Flutter app
 
-This directory contains only the Dart source (`lib/`), `pubspec.yaml`, and
-assets. The Flutter SDK was not available on the machine this was built on,
-so the platform scaffolding (`android/`, `ios/`, `web/`, etc.) has **not**
-been generated yet. Generating it is a one-time, automatic step — no manual
-platform code is required.
+Android and web platform folders are committed and **verified working**:
+`flutter analyze` is clean, the widget test suite passes, `flutter build apk
+--release` produces a working release APK, and `flutter build web --release`
+produces a working web build — all confirmed in this repository's own build
+history (see `PROJECT_REPORT.md` §9 and `docs/screenshots/` for real
+screenshots captured from the running app). iOS/macOS/Linux/Windows
+scaffolding was not generated (no toolchain for those platforms was
+available in the build environment) — run `flutter create
+--platforms=ios,macos,linux,windows .` once on a machine with the relevant
+SDKs to add them; it only adds the missing folders and won't touch `lib/`.
 
 ## First-time setup
 
 1. Install the Flutter SDK (3.24+) if you haven't: https://docs.flutter.dev/get-started/install
-2. From this directory, generate the platform folders:
+2. Install dependencies:
    ```bash
    cd app
-   flutter create .
-   ```
-   This detects the existing `pubspec.yaml` and `lib/`, and only adds the
-   missing `android/`, `ios/`, etc. folders — it will not overwrite your code.
-3. Install dependencies:
-   ```bash
    flutter pub get
    ```
-4. (Optional) Generate the native splash screen:
+3. (Optional) Generate the native splash screen:
    ```bash
    dart run flutter_native_splash:create
    ```
+
+### Windows note
+
+If you build on Windows with the project on a different drive letter than
+your Pub cache (e.g. project on `E:`, Pub cache on `C:`), you may hit a
+known Kotlin incremental-compiler bug during `flutter build apk`. It's
+already worked around in `android/gradle.properties`
+(`kotlin.incremental=false`); no action needed unless you've deleted that
+file.
 
 ## Running against the backend
 

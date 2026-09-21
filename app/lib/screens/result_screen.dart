@@ -95,7 +95,7 @@ class _ResultScreenState extends State<ResultScreen> {
                   title: 'Text found in image (OCR)',
                   child: SelectableText(
                     result.detectedText!,
-                    style: GoogleFonts.inter(fontSize: 14, fontFamily: 'monospace', height: 1.5),
+                    style: const TextStyle(fontSize: 14, fontFamily: 'monospace', height: 1.5),
                   ),
                 ),
               ],
@@ -116,7 +116,7 @@ class _ResultScreenState extends State<ResultScreen> {
         margin: const EdgeInsets.only(bottom: Spacing.md),
         padding: const EdgeInsets.all(Spacing.sm),
         decoration: BoxDecoration(
-          color: AppColors.warning.withOpacity(0.12),
+          color: AppColors.warning.withValues(alpha: 0.12),
           borderRadius: BorderRadius.circular(Radii.button),
         ),
         child: Row(
@@ -125,8 +125,8 @@ class _ResultScreenState extends State<ResultScreen> {
             const SizedBox(width: Spacing.sm),
             Expanded(
               child: Text(
-                'Demo mode: this is placeholder analysis. Configure ANTHROPIC_API_KEY on '
-                'the backend for live results.',
+                'Demo mode: this is placeholder analysis. Configure GEMINI_API_KEY (free) or '
+                'ANTHROPIC_API_KEY on the backend for live results.',
                 style: GoogleFonts.inter(fontSize: 12, color: Colors.grey.shade800),
               ),
             ),
@@ -138,9 +138,9 @@ class _ResultScreenState extends State<ResultScreen> {
         margin: const EdgeInsets.only(bottom: Spacing.md),
         padding: const EdgeInsets.all(Spacing.sm),
         decoration: BoxDecoration(
-          color: AppColors.danger.withOpacity(0.08),
+          color: AppColors.danger.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(Radii.button),
-          border: Border.all(color: AppColors.danger.withOpacity(0.25)),
+          border: Border.all(color: AppColors.danger.withValues(alpha: 0.25)),
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -359,16 +359,20 @@ class _ResultScreenState extends State<ResultScreen> {
       buffer.writeln('- ${o.name} (${o.band.name} confidence)');
     }
     if (result.detectedText != null) {
-      buffer.writeln()
-        ..writeln('Text found in image:')
-        ..writeln(result.detectedText);
+      buffer.writeln();
+      buffer.writeln('Text found in image:');
+      buffer.writeln(result.detectedText);
     }
     if (result.questions.isNotEmpty) {
-      buffer.writeln()..writeln('Questions & answers:');
+      buffer.writeln();
+      buffer.writeln('Questions & answers:');
       for (final qa in result.questions) {
-        buffer.writeln('Q: ${qa.question}')..writeln('A: ${qa.answer}');
+        buffer.writeln('Q: ${qa.question}');
+        buffer.writeln('A: ${qa.answer}');
       }
     }
-    await Share.share(buffer.toString(), subject: 'AI Image Analysis');
+    await SharePlus.instance.share(
+      ShareParams(text: buffer.toString(), subject: 'AI Image Analysis'),
+    );
   }
 }

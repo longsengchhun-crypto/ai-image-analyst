@@ -22,13 +22,19 @@ class ImageUploadScreen extends StatelessWidget {
         builder: (context, provider, _) {
           switch (provider.status) {
             case AnalysisStatus.initial:
-              return _InitialState(onCamera: provider.pickFromCamera, onGallery: provider.pickFromGallery);
+              return _InitialState(
+                  onCamera: provider.pickFromCamera,
+                  onGallery: provider.pickFromGallery);
             case AnalysisStatus.imageSelected:
-              return _PreviewState(provider: provider, onAnalyze: () => _analyze(context, provider));
+              return _PreviewState(
+                  provider: provider,
+                  onAnalyze: () => _analyze(context, provider));
             case AnalysisStatus.loading:
               return _LoadingState(provider: provider);
             case AnalysisStatus.error:
-              return _ErrorState(provider: provider, onRetry: () => _analyze(context, provider));
+              return _ErrorState(
+                  provider: provider,
+                  onRetry: () => _analyze(context, provider));
             case AnalysisStatus.success:
               // Transient: the button handler below navigates away and then
               // resets, so this case is essentially never rendered.
@@ -38,7 +44,9 @@ class ImageUploadScreen extends StatelessWidget {
       ),
       floatingActionButton: Consumer<ImageAnalysisProvider>(
         builder: (context, provider, _) {
-          if (provider.status != AnalysisStatus.initial) return const SizedBox.shrink();
+          if (provider.status != AnalysisStatus.initial) {
+            return const SizedBox.shrink();
+          }
           return FloatingActionButton.extended(
             onPressed: () => _showSourceSheet(context, provider),
             icon: const Icon(Icons.add_a_photo_outlined),
@@ -49,16 +57,19 @@ class ImageUploadScreen extends StatelessWidget {
     );
   }
 
-  static Future<void> _analyze(BuildContext context, ImageAnalysisProvider provider) async {
+  static Future<void> _analyze(
+      BuildContext context, ImageAnalysisProvider provider) async {
     await provider.submitForAnalysis();
     if (!context.mounted) return;
     if (provider.status == AnalysisStatus.success) {
-      await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ResultScreen()));
+      await Navigator.of(context)
+          .push(MaterialPageRoute(builder: (_) => const ResultScreen()));
       if (context.mounted) provider.reset();
     }
   }
 
-  static void _showSourceSheet(BuildContext context, ImageAnalysisProvider provider) {
+  static void _showSourceSheet(
+      BuildContext context, ImageAnalysisProvider provider) {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -81,10 +92,13 @@ class _SourceSheet extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('Add a photo', style: GoogleFonts.inter(fontSize: 17, fontWeight: FontWeight.w700)),
+            Text('Add a photo',
+                style: GoogleFonts.inter(
+                    fontSize: 17, fontWeight: FontWeight.w700)),
             const SizedBox(height: Spacing.md),
             ListTile(
-              leading: const Icon(Icons.photo_camera_outlined, color: AppColors.primary),
+              leading: const Icon(Icons.photo_camera_outlined,
+                  color: AppColors.primary),
               title: const Text('Take a photo'),
               onTap: () {
                 Navigator.pop(context);
@@ -92,7 +106,8 @@ class _SourceSheet extends StatelessWidget {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.photo_library_outlined, color: AppColors.primary),
+              leading: const Icon(Icons.photo_library_outlined,
+                  color: AppColors.primary),
               title: const Text('Choose from gallery'),
               onTap: () {
                 Navigator.pop(context);
@@ -113,60 +128,71 @@ class _InitialState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
+    // A SingleChildScrollView + ConstrainedBox (rather than a bare Column
+    // inside a Center) keeps this guidance screen from overflowing on short
+    // viewports (small phones in landscape, or a resized desktop/web window)
+    // while still centering the content vertically when there's room to.
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
         padding: const EdgeInsets.all(Spacing.xl),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 96,
-              height: 96,
-              decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.08),
-                shape: BoxShape.circle,
+        child: ConstrainedBox(
+          constraints:
+              BoxConstraints(minHeight: constraints.maxHeight - Spacing.xl * 2),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 96,
+                height: 96,
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.08),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.visibility_outlined,
+                    size: 44, color: AppColors.primary),
               ),
-              child: const Icon(Icons.visibility_outlined, size: 44, color: AppColors.primary),
-            ),
-            const SizedBox(height: Spacing.lg),
-            Text(
-              'Understand any image instantly',
-              textAlign: TextAlign.center,
-              style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: Spacing.sm),
-            Text(
-              'Capture or upload a photo to get an AI description, detected '
-              'objects, and answers to your questions about it.',
-              textAlign: TextAlign.center,
-              style: GoogleFonts.inter(fontSize: 14, color: Colors.grey.shade600, height: 1.4),
-            ),
-            const SizedBox(height: Spacing.xl),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: onCamera,
-                icon: const Icon(Icons.photo_camera_outlined),
-                label: const Text('Take a photo'),
+              const SizedBox(height: Spacing.lg),
+              Text(
+                'Understand any image instantly',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.inter(
+                    fontSize: 20, fontWeight: FontWeight.w700),
               ),
-            ),
-            const SizedBox(height: Spacing.sm),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: onGallery,
-                icon: const Icon(Icons.photo_library_outlined),
-                label: const Text('Choose from gallery'),
+              const SizedBox(height: Spacing.sm),
+              Text(
+                'Capture or upload a photo to get an AI description, detected '
+                'objects, and answers to your questions about it.',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.inter(
+                    fontSize: 14, color: Colors.grey.shade600, height: 1.4),
               ),
-            ),
-            const SizedBox(height: Spacing.lg),
-            Text(
-              'By continuing, images you submit are sent to our server and a '
-              'third-party AI service for analysis. See Settings for privacy details.',
-              textAlign: TextAlign.center,
-              style: GoogleFonts.inter(fontSize: 11, color: Colors.grey),
-            ),
-          ],
+              const SizedBox(height: Spacing.xl),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: onCamera,
+                  icon: const Icon(Icons.photo_camera_outlined),
+                  label: const Text('Take a photo'),
+                ),
+              ),
+              const SizedBox(height: Spacing.sm),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: onGallery,
+                  icon: const Icon(Icons.photo_library_outlined),
+                  label: const Text('Choose from gallery'),
+                ),
+              ),
+              const SizedBox(height: Spacing.lg),
+              Text(
+                'By continuing, images you submit are sent to our server and a '
+                'third-party AI service for analysis. See Settings for privacy details.',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.inter(fontSize: 11, color: Colors.grey),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -187,12 +213,14 @@ class _PreviewState extends StatelessWidget {
             padding: const EdgeInsets.all(Spacing.md),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(Radii.card),
-              child: Image.file(provider.selectedImage!, fit: BoxFit.cover, width: double.infinity),
+              child: Image.file(provider.selectedImage!,
+                  fit: BoxFit.cover, width: double.infinity),
             ),
           ),
         ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(Spacing.md, 0, Spacing.md, Spacing.lg),
+          padding:
+              const EdgeInsets.fromLTRB(Spacing.md, 0, Spacing.md, Spacing.lg),
           child: Row(
             children: [
               Expanded(
@@ -231,7 +259,8 @@ class _LoadingState extends StatelessWidget {
             padding: const EdgeInsets.all(Spacing.md),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(Radii.card),
-              child: Image.file(provider!.selectedImage!, height: 220, fit: BoxFit.cover, width: double.infinity),
+              child: Image.file(provider!.selectedImage!,
+                  height: 220, fit: BoxFit.cover, width: double.infinity),
             ),
           ),
         Padding(
@@ -241,10 +270,12 @@ class _LoadingState extends StatelessWidget {
               const SizedBox(
                 width: 18,
                 height: 18,
-                child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.accent),
+                child: CircularProgressIndicator(
+                    strokeWidth: 2, color: AppColors.accent),
               ),
               const SizedBox(width: Spacing.sm),
-              Text('Analyzing your image...', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+              Text('Analyzing your image...',
+                  style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
             ],
           ),
         ),
@@ -271,21 +302,25 @@ class _ErrorState extends StatelessWidget {
             const SizedBox(height: Spacing.md),
             Text(
               'We couldn\'t analyze that image',
-              style: GoogleFonts.inter(fontSize: 17, fontWeight: FontWeight.w700),
+              style:
+                  GoogleFonts.inter(fontSize: 17, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: Spacing.sm),
             Text(
               provider.errorMessage ?? 'Please try again.',
               textAlign: TextAlign.center,
-              style: GoogleFonts.inter(fontSize: 14, color: Colors.grey.shade600),
+              style:
+                  GoogleFonts.inter(fontSize: 14, color: Colors.grey.shade600),
             ),
             const SizedBox(height: Spacing.lg),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                OutlinedButton(onPressed: provider.reset, child: const Text('Start over')),
+                OutlinedButton(
+                    onPressed: provider.reset, child: const Text('Start over')),
                 const SizedBox(width: Spacing.md),
-                ElevatedButton(onPressed: onRetry, child: const Text('Try again')),
+                ElevatedButton(
+                    onPressed: onRetry, child: const Text('Try again')),
               ],
             ),
           ],
