@@ -1,8 +1,12 @@
-import 'dart:io';
+import 'dart:typed_data';
 
 /// Client-side guardrails before we ever spend bandwidth / API calls uploading
 /// an image. The backend re-validates everything server-side too — never
 /// trust the client alone.
+///
+/// Operates on the already-compressed bytes (see `ImageService`) rather than
+/// a `dart:io File`/path, since the picked image is normalized to JPEG bytes
+/// before this ever runs, and bytes work identically on web and mobile.
 class ImageValidationResult {
   final bool isValid;
   final String? errorMessage;
@@ -13,28 +17,17 @@ class ImageValidationResult {
 class Validators {
   Validators._();
 
-  static const Set<String> supportedExtensions = {'.jpg', '.jpeg', '.png', '.webp'};
   static const int maxFileSizeBytes = 8 * 1024 * 1024; // 8MB, matches backend cap
 
-  static ImageValidationResult validateImageFile(File file) {
-    final lowerPath = file.path.toLowerCase();
-    final hasSupportedExt = supportedExtensions.any((ext) => lowerPath.endsWith(ext));
-    if (!hasSupportedExt) {
+  static ImageValidationResult validateImageBytes(Uint8List bytes) {
+    if (bytes.isEmpty) {
+      return const ImageValidationResult.invalid('That image appears to be empty or corrupted.');
+    }
+    if (bytes.lengthInBytes > maxFileSizeBytes) {
       return const ImageValidationResult.invalid(
-        'Unsupported file type. Please choose a JPEG, PNG, or WebP image.',
+        'That image is larger than 8MB even after compression. Please choose a smaller image.',
       );
     }
-
-    final sizeBytes = file.lengthSync();
-    if (sizeBytes > maxFileSizeBytes) {
-      return const ImageValidationResult.invalid(
-        'That image is larger than 8MB. Please choose a smaller image.',
-      );
-    }
-    if (sizeBytes == 0) {
-      return const ImageValidationResult.invalid('That file appears to be empty or corrupted.');
-    }
-
     return const ImageValidationResult.valid();
   }
 

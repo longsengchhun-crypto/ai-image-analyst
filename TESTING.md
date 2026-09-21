@@ -31,7 +31,8 @@ Flutter app build/test/analyze pipeline, **was** executed and verified:
 | Widget test suite | `flutter test` | ✅ Passing (boots the real app, asserts the Analyze screen and bottom nav render) |
 | Release Android build | `flutter build apk --release --dart-define=API_BASE_URL=... --dart-define=APP_API_KEY=...` | ✅ Produces a working 51.3MB `app-release.apk` |
 | Release web build | `flutter build web --release --dart-define=...` | ✅ Builds; driven headlessly in a real browser against the live backend to capture `docs/screenshots/` |
-| End-to-end UI verification | Seeded two real history entries via the live API, loaded the built web app with an injected session token, navigated Analyze → History → Result detail → Settings → source-sheet modal, in both light and dark themes | ✅ All screens render correctly with real data — see `docs/screenshots/` and PROJECT_REPORT.md §9 |
+| End-to-end UI verification (static screens) | Seeded two real history entries via the live API, loaded the built web app with an injected session token, navigated Analyze → History → Result detail → Settings → source-sheet modal, in both light and dark themes | ✅ All screens render correctly with real data — see `docs/screenshots/` and PROJECT_REPORT.md §9 |
+| **End-to-end UI verification (live capture flow)** | Fresh run with no seeded data: tapped the FAB, picked an image through the browser's real file chooser, tapped "Analyze image," and let the app make a real `POST /api/analyze-image` call to the live Vercel backend | ✅ Preview, shimmer loading skeleton, and the final result screen all captured mid-flow — `docs/screenshots/07-fresh-capture-preview.png` through `09-fresh-capture-result.png` |
 
 **Bugs found and fixed by actually running the build**, not just writing
 code:
@@ -54,6 +55,43 @@ code:
   (`this and base files have different roots`) when the Flutter project
   lives on a different drive letter than the Pub cache. Worked around with
   `kotlin.incremental=false` in `android/gradle.properties`.
+- **`dart:io File` doesn't exist on Flutter web.** `ImageService` and
+  `ApiService` originally used `File`/`MultipartFile.fromFile()`, which
+  compiles fine but throws at runtime the moment a picked image is touched
+  in a browser — silently breaking the entire capture flow with no console
+  error (Flutter swallows the exception inside its own error zone). Rewrote
+  both to operate on `Uint8List` bytes (`image_picker`'s `XFile.readAsBytes()`
+  → `FlutterImageCompress.compressWithList()` → `MultipartFile.fromBytes()`),
+  which works identically on mobile, desktop, and web with no platform
+  branching. This was caught by actually driving a fresh pick-and-analyze
+  flow through a real browser, not by code review.
+- **A more serious bug in the same area**: `submitForAnalysis()` set the
+  screen to "success" and then wrote a copy to the local SQLite cache in the
+  same try block. If that cache write failed for *any* reason — including,
+  ironically, sqflite simply not existing on the web platform used to test
+  this — the catch handler downgraded a fully successful AI analysis back to
+  an error screen, discarding the result the user had just correctly
+  received. Fixed by moving the cache write into its own isolated,
+  non-fatal try/catch that can never override a successful result. This
+  bug was platform-agnostic — it could in principle have fired on mobile
+  too under a rare sqflite hiccup — and was only surfaced by actually
+  running the full flow against a live backend rather than by reading the
+  code.
+
+**One thing headless browser automation could not confirm, and why that's
+not a code concern**: typing into the "Ask about this image" `TextField`
+and tapping Send was implemented and is backed by a `POST /api/ask-question`
+call already verified directly via `curl` (see the backend table above).
+Simulating keystrokes into Flutter web's text-editing layer from a headless
+browser proved unreliable across several attempts (`ui.fill()`, `page.click()`
++ `keyboard.type()`, and literal coordinate clicks) — a known class of
+flakiness specific to automating Flutter's web semantics/text-input bridge,
+not something particular to this app's code. `TextField` +
+`TextEditingController` + `onSubmitted`/`onPressed` is standard, unmodified
+Flutter API identical to every other interactive control in this app that
+*did* respond correctly to the same automation (buttons, tabs, the photo
+picker). Confirming this specific interaction with a real tap on a real
+device/emulator is the one manual check worth doing before a live demo.
 
 This proves the plumbing — upload handling, image normalization, JWT/API-key
 auth, Postgres persistence (including JSONB append), serverless deployment,

@@ -10,7 +10,6 @@ import 'qa_pair.dart';
 /// (SQLite) and for what comes back from the backend.
 class ImageAnalysis {
   final String id;
-  final String? localImagePath; // path on device, if this came from a fresh capture
   final String? thumbnailBase64; // data URI, from backend or cached locally
   final String description;
   final List<DetectedObject> objects;
@@ -30,7 +29,6 @@ class ImageAnalysis {
     required this.confidenceBand,
     required this.questions,
     required this.createdAt,
-    this.localImagePath,
     this.thumbnailBase64,
     this.detectedText,
     this.uncertaintyNote,
@@ -39,11 +37,9 @@ class ImageAnalysis {
 
   ImageAnalysis copyWith({
     List<QaPair>? questions,
-    String? localImagePath,
   }) {
     return ImageAnalysis(
       id: id,
-      localImagePath: localImagePath ?? this.localImagePath,
       thumbnailBase64: thumbnailBase64,
       description: description,
       objects: objects,

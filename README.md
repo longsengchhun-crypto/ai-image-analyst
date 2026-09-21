@@ -1,5 +1,11 @@
 # AI Image Analyst
 
+**Try it now, no install: https://ai-image-analyst-web.vercel.app** — this is
+the actual app running in your browser (Flutter compiled to web), talking to
+the live backend below. Pick a photo and click Analyze; everything through
+description + detected objects works for real. (Camera capture needs a
+device with a camera — use "Choose from gallery" in a desktop browser.)
+
 A mobile app that lets a user capture or upload a photo and get an AI-generated
 description, a list of detected objects, OCR text extraction, and grounded
 answers to free-form questions about the image — with honest confidence
@@ -8,6 +14,7 @@ messaging throughout, never a bare "I don't know."
 | Layer | Tech | Status |
 |---|---|---|
 | Mobile app | Flutter (Dart) | **Verified**: `flutter analyze` clean, tests pass, release APK builds — see [app/](app/) |
+| Web build (same app) | Flutter → web | **Live**: https://ai-image-analyst-web.vercel.app |
 | Backend API | Node.js + Express | Complete, tested against live DB — see [backend/](backend/) |
 | Database | Postgres on Neon | Migrated and live |
 | Hosting | Vercel (serverless) | **Deployed**: `https://ai-image-analyst-backend.vercel.app` |
@@ -53,16 +60,22 @@ This was not left as an on-paper design — everything below was actually run:
   suite passes; `flutter build apk --release` produces a working release
   APK; `flutter build web --release` produces a working web build.
 - **Real screenshots**, captured from the actual running app (web build,
-  driven headlessly) against the live backend — not mockups — covering the
-  Analyze screen, a populated History list (seeded via the live API), the
-  full analysis detail/Q&A screen, the Settings screen, and the photo-source
-  bottom sheet. See `docs/screenshots/` for the images and
-  `PROJECT_REPORT.md` §9 for what each one shows and the one interaction
-  path (fresh camera/gallery capture inside a browser) that a device or
-  emulator is needed to demo, and why.
-- **A real overflow bug** on short viewports was caught by the automated
-  test and fixed (the Analyze screen's guidance content is now scrollable
-  instead of a fixed `Column`) — see `app/lib/screens/image_upload_screen.dart`.
+  driven headlessly) — not mockups — including a genuine, un-seeded
+  pick-a-photo → analyze → view-result run against the live backend, with no
+  data pre-loaded. See `docs/screenshots/` (`07`–`09` are the fresh-capture
+  run) and `PROJECT_REPORT.md` §9.
+- **Three real bugs found and fixed** by actually running the app end to
+  end, not just reading the code:
+  1. A `RenderFlex overflowed by 7.0 pixels` layout bug on short viewports —
+     the Analyze screen's guidance content wasn't scrollable.
+  2. `ImageService`/`ApiService` used `dart:io File`, which doesn't exist on
+     Flutter web — the entire capture flow silently broke the moment an
+     image was picked. Rewritten to work on raw bytes everywhere (mobile,
+     desktop, and web) instead.
+  3. A more serious one: a failed local-cache write could silently downgrade
+     a **successful** AI analysis into an error screen, discarding a correct
+     result the user had already received. This could in principle have hit
+     mobile too, not just web — see TESTING.md for the full explanation and fix.
 
 ## Repository layout
 

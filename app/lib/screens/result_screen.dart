@@ -60,7 +60,7 @@ class _ResultScreenState extends State<ResultScreen> {
             padding: const EdgeInsets.all(Spacing.md),
             children: [
               if (result.isDemoMode) _demoBanner(),
-              if (provider.selectedImage != null)
+              if (provider.selectedImageBytes != null)
                 _imagePreview(provider)
               else if (result.thumbnailBase64 != null)
                 _thumbnailPreview(result.thumbnailBase64!),
@@ -100,7 +100,7 @@ class _ResultScreenState extends State<ResultScreen> {
                 ),
               ],
               const SizedBox(height: Spacing.md),
-              if (provider.selectedImage != null)
+              if (provider.selectedImageBytes != null)
                 _questionSection(context, provider, result.questions)
               else if (result.questions.isNotEmpty)
                 _pastQuestionsReadOnly(result.questions),
@@ -160,7 +160,7 @@ class _ResultScreenState extends State<ResultScreen> {
       child: SizedBox(
         height: 260,
         child: PhotoView(
-          imageProvider: FileImage(provider.selectedImage!),
+          imageProvider: MemoryImage(provider.selectedImageBytes!),
           minScale: PhotoViewComputedScale.contained,
           maxScale: PhotoViewComputedScale.covered * 3,
           backgroundDecoration: const BoxDecoration(color: Colors.black12),
@@ -237,6 +237,7 @@ class _ResultScreenState extends State<ResultScreen> {
                   child: TextField(
                     controller: _questionController,
                     decoration: const InputDecoration(
+                      labelText: 'Ask about this image',
                       hintText: 'e.g. How many people are in this image?',
                     ),
                     textInputAction: TextInputAction.send,
@@ -246,11 +247,14 @@ class _ResultScreenState extends State<ResultScreen> {
                 const SizedBox(width: Spacing.sm),
                 SizedBox(
                   height: 48,
-                  child: ElevatedButton(
-                    onPressed: provider.isAskingQuestion ? null : () => _submitQuestion(provider),
-                    child: provider.isAskingQuestion
-                        ? const InlineLoadingLabel(label: '')
-                        : const Icon(Icons.send_rounded, size: 18),
+                  child: Tooltip(
+                    message: 'Send question',
+                    child: ElevatedButton(
+                      onPressed: provider.isAskingQuestion ? null : () => _submitQuestion(provider),
+                      child: provider.isAskingQuestion
+                          ? const InlineLoadingLabel(label: '')
+                          : const Icon(Icons.send_rounded, size: 18),
+                    ),
                   ),
                 ),
               ],

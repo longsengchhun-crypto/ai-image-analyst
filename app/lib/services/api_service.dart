@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -12,8 +12,12 @@ import '../utils/constants.dart';
 /// token thereafter) so callers never think about auth.
 ///
 /// IMPORTANT: no third-party AI API key ever lives in this app. The Flutter
-/// client only ever talks to our own backend, which holds the Anthropic key
-/// server-side (see backend/src/services/visionProvider.js).
+/// client only ever talks to our own backend, which holds the Gemini/Anthropic
+/// key server-side (see backend/src/services/visionProvider.js).
+///
+/// Images are sent as raw bytes (`Uint8List`), not `dart:io File` paths, so
+/// this service works unchanged on web (where there is no filesystem) as
+/// well as mobile and desktop.
 class ApiException implements Exception {
   final String message;
   ApiException(this.message);
@@ -59,11 +63,11 @@ class ApiService {
   Options get _authedOptions => Options(headers: {'Authorization': 'Bearer $_token'});
 
   /// POST /api/analyze-image
-  Future<ImageAnalysis> analyzeImage(File imageFile) async {
+  Future<ImageAnalysis> analyzeImage(Uint8List imageBytes) async {
     await ensureAuthenticated();
     try {
       final formData = FormData.fromMap({
-        'image': await MultipartFile.fromFile(imageFile.path, filename: 'upload.jpg'),
+        'image': MultipartFile.fromBytes(imageBytes, filename: 'upload.jpg'),
       });
       final resp = await _dio.post(
         '/api/analyze-image',
@@ -78,14 +82,14 @@ class ApiService {
 
   /// POST /api/ask-question
   Future<QaPair> askQuestion({
-    required File imageFile,
+    required Uint8List imageBytes,
     required String question,
     required String historyId,
   }) async {
     await ensureAuthenticated();
     try {
       final formData = FormData.fromMap({
-        'image': await MultipartFile.fromFile(imageFile.path, filename: 'upload.jpg'),
+        'image': MultipartFile.fromBytes(imageBytes, filename: 'upload.jpg'),
         'question': question,
         'historyId': historyId,
       });

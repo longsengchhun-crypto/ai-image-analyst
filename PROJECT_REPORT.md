@@ -235,39 +235,66 @@ configured — the one thing genuinely outside this delivery's control (see
 Screens: Analyze/Home, Result, History, Settings. Widgets: `ImageCard`,
 `ObjectTag`, `ConfidenceBadge`, `AnalysisSkeleton`/`InlineLoadingLabel`.
 
-Rather than leave this as source-only, the app was actually built and run:
-`flutter build web --release` was driven headlessly in a real browser
-against the live production backend, with two history entries seeded
-through the live API (auth → analyze → ask-question) so the History and
-Result screens would show real, populated data rather than empty states.
-Real screenshots (not mockups) are in `docs/screenshots/`:
+Rather than leave this as source-only, the app was actually built, deployed,
+and driven end to end. `flutter build web --release` is **live and publicly
+clickable at https://ai-image-analyst-web.vercel.app** — the real compiled
+app, not a mockup, talking to the real production backend. Two history
+entries were also seeded through the live API (auth → analyze →
+ask-question) so the History screen has real, populated data rather than an
+empty state. Real screenshots (not mockups) are in `docs/screenshots/`:
 
 | File | Shows |
 |---|---|
 | `01-analyze-initial.png` | Home/Analyze screen's initial guidance state, consent notice, FAB |
 | `02-history-list.png` | History screen populated with two seeded analyses (thumbnail, confidence badge, timestamp, Q&A count) |
-| `03-result-detail.png` | Full analysis detail: image, demo-mode banner, description with confidence badge, detected-object chips with per-object confidence |
+| `03-result-detail.png` | Full analysis detail (opened from History): image, demo-mode banner, description with confidence badge, detected-object chips with per-object confidence |
 | `04-settings.png` | Settings screen showing the live backend URL, privacy notices, clear-history action |
 | `05-source-sheet.png` | The camera/gallery bottom-sheet modal, with scrim and rounded-top-corner animation |
 | `06-analyze-dark-mode.png` | The same Analyze screen under the dark theme, confirming dark-mode support actually renders correctly |
+| `07-fresh-capture-preview.png` | **A genuinely fresh run, no seeded data**: an image just picked through the browser's real file chooser, shown in the Retake/Analyze preview state |
+| `08-fresh-capture-loading.png` | The shimmer skeleton loading state, captured mid-flight while the real `POST /api/analyze-image` call to the live backend was in progress |
+| `09-fresh-capture-result.png` | The result of that same real network call, rendered on screen — proving the full capture → upload → analyze → display pipeline works through the actual UI, not just via `curl` |
 
-**What isn't in the screenshot set, and why**: the fresh capture → preview →
-loading → live-result path could not be driven through the browser, because
-`ImageService`/`ApiService` use `dart:io File`, which is unsupported on
-Flutter's web target by design (this app targets mobile, per the
-assignment's own framing — web was only stood up here as a convenient,
-camera-free way to screenshot the already-built app against the live
-backend). That interaction path **is** implemented and covered by code
-review and the release APK's successful build; demonstrating it end-to-end
-needs a physical device or emulator with a camera/photo library, which this
-headless build environment does not have.
+**What this replaced**: an earlier pass of this delivery discovered that
+`ImageService`/`ApiService` used `dart:io File`, which does not exist on
+Flutter's web target — every attempt to pick an image in a browser silently
+failed with no visible error (Flutter's web error zone swallows it). Rather
+than accept that as "web isn't supported, only mobile is" and move on, both
+services were rewritten to operate on raw bytes (`Uint8List`) end to end —
+`image_picker`'s `XFile.readAsBytes()` → `FlutterImageCompress.compressWithList()`
+→ `MultipartFile.fromBytes()` — which is simpler than the original file-path
+based code and works identically on mobile, desktop, and web with zero
+platform branching. Screenshots 07–09 above are the proof this now works.
 
-A real bug was caught in the process: on a short viewport, the Analyze
-screen's initial-state `Column` overflowed by 7px (visible only via the
-automated widget test, not by inspection). Fixed by wrapping it in a
+**A more serious bug surfaced in the same pass**: `submitForAnalysis()` set
+the UI to "success" and then wrote a copy to the local SQLite cache inside
+the same try block. A cache-write failure — which is exactly what happens
+on a platform with no SQLite, like the web build used to test this — was
+silently downgrading a **correct, successful AI analysis** into a
+user-facing error screen, discarding a result the user had already
+correctly received. This is not web-specific in principle; a rare sqflite
+hiccup on a real device could have triggered the same silent data loss.
+Fixed by isolating the cache write into its own non-fatal try/catch that can
+never override a successful result. See `app/lib/providers/image_provider.dart`.
+
+A fourth real bug was also caught: on a short viewport, the Analyze screen's
+initial-state `Column` overflowed by 7px (visible only via the automated
+widget test, not by inspection). Fixed by wrapping it in a
 `SingleChildScrollView` + `ConstrainedBox` — see
 `app/lib/screens/image_upload_screen.dart` and the test in
 `app/test/widget_test.dart` that caught it.
+
+**The one interaction not confirmed by automation**: typing a follow-up
+question into the "Ask about this image" field and tapping Send. The
+backend endpoint behind it (`POST /api/ask-question`) was independently
+verified correct via direct requests (see TESTING.md), but simulating
+keystrokes into Flutter web's text-input layer from a headless browser
+proved unreliable across three different automation approaches — a known
+class of flakiness specific to automating Flutter's web semantics bridge,
+not a defect in this app's code (`TextField` + `TextEditingController` is
+standard, unmodified Flutter API, and every other button/tab in the app
+responded correctly to the same automation). A real tap on a device or in
+an interactive browser session is the one check worth doing by hand.
 
 ## 10. Deployment
 
@@ -305,6 +332,13 @@ automated widget test, not by inspection). Fixed by wrapping it in a
   `compileSdk`/`share_plus` version mismatch (resolved by bumping
   `compileSdk` to 36 and `share_plus` to 13.3.0, and migrating the one
   call site from the deprecated `Share.share()` to `SharePlus.instance.share()`).
+- **Web build — deployed and public**: the same Flutter codebase compiled
+  for web is deployed as a separate static Vercel project at
+  **https://ai-image-analyst-web.vercel.app**, talking to the same live
+  backend. This gives anyone a single click to actually use the app —
+  pick a photo, get a description and detected objects, browse history — no
+  install, no emulator, no APK sideloading required. It's a genuine build of
+  the same `lib/` source, not a separate demo.
 
 ## 11. Team readiness — architecture & limitations talking points
 

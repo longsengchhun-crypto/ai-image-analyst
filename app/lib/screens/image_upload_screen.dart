@@ -213,7 +213,7 @@ class _PreviewState extends StatelessWidget {
             padding: const EdgeInsets.all(Spacing.md),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(Radii.card),
-              child: Image.file(provider.selectedImage!,
+              child: Image.memory(provider.selectedImageBytes!,
                   fit: BoxFit.cover, width: double.infinity),
             ),
           ),
@@ -254,12 +254,12 @@ class _LoadingState extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        if (provider?.selectedImage != null)
+        if (provider?.selectedImageBytes != null)
           Padding(
             padding: const EdgeInsets.all(Spacing.md),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(Radii.card),
-              child: Image.file(provider!.selectedImage!,
+              child: Image.memory(provider!.selectedImageBytes!,
                   height: 220, fit: BoxFit.cover, width: double.infinity),
             ),
           ),
@@ -301,7 +301,9 @@ class _ErrorState extends StatelessWidget {
             const Icon(Icons.error_outline, size: 48, color: AppColors.danger),
             const SizedBox(height: Spacing.md),
             Text(
-              'We couldn\'t analyze that image',
+              provider.selectedImageBytes == null
+                  ? 'That image can\'t be used'
+                  : 'We couldn\'t analyze that image',
               style:
                   GoogleFonts.inter(fontSize: 17, fontWeight: FontWeight.w700),
             ),
@@ -318,9 +320,13 @@ class _ErrorState extends StatelessWidget {
               children: [
                 OutlinedButton(
                     onPressed: provider.reset, child: const Text('Start over')),
-                const SizedBox(width: Spacing.md),
-                ElevatedButton(
-                    onPressed: onRetry, child: const Text('Try again')),
+                // A validation failure (bad/empty image) has no image to
+                // retry analyzing — only offer "Try again" once one is picked.
+                if (provider.selectedImageBytes != null) ...[
+                  const SizedBox(width: Spacing.md),
+                  ElevatedButton(
+                      onPressed: onRetry, child: const Text('Try again')),
+                ],
               ],
             ),
           ],
